@@ -1326,7 +1326,7 @@ function designRequest(status) {
 }
 
 // src/Lifecycle.jsx
-var import_react4 = __toESM(require("react"), 1);
+var import_react5 = __toESM(require("react"), 1);
 
 // src/QaReview.jsx
 var import_react3 = __toESM(require("react"), 1);
@@ -1385,12 +1385,172 @@ function QaReview({ status, api, busy: busy2, onSaved }) {
   ] });
 }
 
-// src/Lifecycle.jsx
+// src/PlayableBuild.jsx
+var import_react4 = __toESM(require("react"), 1);
+
+// src/build-guidance.mjs
+var preparation = {
+  TEMPLATES_REQUIRED: "\u8FD8\u7F3A\u5C11\u5F53\u524D Godot \u7248\u672C\u7684 Windows \u6253\u5305\u7EC4\u4EF6\uFF0C\u6682\u65F6\u4E0D\u80FD\u751F\u6210\u8BD5\u73A9\u5305\u3002\u8BA9 AI \u5E2E\u4F60\u6838\u5BF9\u7248\u672C\u548C\u5B89\u88C5\u4F4D\u7F6E\u540E\uFF0C\u518D\u8865\u9F50\u7EC4\u4EF6\u3002",
+  ENGINE_REQUIRED: "\u5F53\u524D\u914D\u7F6E\u7684 Godot \u65E0\u6CD5\u7528\u4E8E\u6253\u5305\u3002\u8BA9 AI \u5148\u68C0\u67E5\u5F15\u64CE\u4F4D\u7F6E\u548C\u7248\u672C\uFF0C\u518D\u7EE7\u7EED\u751F\u6210\u8BD5\u73A9\u5305\u3002",
+  UNSUPPORTED_PROJECT: "\u8FD9\u4E2A\u5DE5\u7A0B\u5305\u542B\u5F53\u524D\u8BD5\u73A9\u6253\u5305\u5668\u5C1A\u4E0D\u652F\u6301\u7684\u4EE3\u7801\u6216\u6269\u5C55\u3002\u8BA9 AI \u5148\u6838\u5BF9\u5176\u4ED6\u5BFC\u51FA\u65B9\u5F0F\uFF0C\u4E0D\u8981\u4E3A\u6253\u5305\u5220\u9664\u8FD9\u4E9B\u5185\u5BB9\u3002",
+  OVERRIDE_UNSUPPORTED: "\u5DE5\u7A0B\u4F7F\u7528\u4E86\u989D\u5916\u7684\u8FD0\u884C\u8BBE\u7F6E\uFF0C\u5DE5\u4F5C\u53F0\u6682\u4E0D\u80FD\u76F4\u63A5\u6253\u5305\u3002\u8BA9 AI \u5148\u6838\u5BF9\u8FD9\u4E9B\u8BBE\u7F6E\u7684\u4F5C\u7528\uFF0C\u518D\u51B3\u5B9A\u5BFC\u51FA\u65B9\u5F0F\u3002"
+};
+function buildPreparationGuidance(job) {
+  if (job?.status === "failed" && !job.exportPassed && job.code === "SAVE_DIRECTORY_UNVERIFIED") return "\u6CA1\u6709\u786E\u8BA4\u72EC\u7ACB\u7684\u8BD5\u73A9\u5B58\u6863\u4F4D\u7F6E\uFF0C\u5DF2\u505C\u6B62\u542F\u52A8\u6E38\u620F\u3002\u8BF7\u5148\u6392\u67E5\u76EE\u5F55\u8BBE\u7F6E\uFF0C\u907F\u514D\u6539\u52A8\u5DF2\u6709\u8FDB\u5EA6\u3002";
+  if (job?.status !== "failed" || job.phase !== "checking" || job.exportPassed) return null;
+  return preparation[job.code] ?? null;
+}
+
+// src/PlayableBuild.jsx
 var import_jsx_runtime3 = require("react/jsx-runtime");
+var phases = { checking: "\u6838\u5BF9\u5F15\u64CE\u4E0E\u6A21\u677F", copying: "\u51C6\u5907\u72EC\u7ACB\u526F\u672C", import: "\u68C0\u67E5\u5DE5\u7A0B", export: "\u751F\u6210\u8BD5\u73A9\u5305", startup: "\u68C0\u67E5\u8BD5\u73A9\u7A0B\u5E8F\u542F\u52A8", saveDirectory: "\u72EC\u7ACB\u5B58\u6863\u4F4D\u7F6E", packedSaveDirectory: "\u6253\u5305\u540E\u7684\u5B58\u6863\u4F4D\u7F6E" };
+function PlayableBuild({ api, engineConfigured, disabled, onAssist, forDelivery = false, reviewing = false, onBuildOpened, onBuildChanged }) {
+  const [job, setJob] = (0, import_react4.useState)(null);
+  const [busy2, setBusy] = (0, import_react4.useState)(false);
+  const [error, setError] = (0, import_react4.useState)("");
+  const [evidence, setEvidence] = (0, import_react4.useState)(null);
+  const [notice, setNotice] = (0, import_react4.useState)("");
+  const [graphics, setGraphics] = (0, import_react4.useState)("project");
+  const mounted = (0, import_react4.useRef)(true);
+  const requestId = (0, import_react4.useRef)(null);
+  const currentId = (0, import_react4.useRef)(null);
+  currentId.current = job?.id;
+  const active = ["running", "cancelling"].includes(job?.status);
+  const unconfirmed = job?.status === "unconfirmed";
+  const unverifiedSaves = Boolean(job?.exportPassed && job.saveIsolationVerified !== true);
+  const needsHelp = job && !active && !unconfirmed && !["ready", "cancelled"].includes(job.status);
+  const preparationGuidance = buildPreparationGuidance(job);
+  (0, import_react4.useEffect)(() => {
+    mounted.current = true;
+    const abort = new AbortController();
+    let timer;
+    async function poll() {
+      try {
+        const value = await api.call("buildStatus", {}, abort.signal);
+        if (mounted.current) setJob(value);
+      } catch (e42) {
+        if (!abort.signal.aborted) setError(e42.message);
+      }
+      if (!abort.signal.aborted) timer = setTimeout(poll, 2e3);
+    }
+    poll();
+    return () => {
+      mounted.current = false;
+      abort.abort();
+      clearTimeout(timer);
+    };
+  }, [api]);
+  (0, import_react4.useEffect)(() => {
+    setEvidence(null);
+    setNotice("");
+  }, [job?.id]);
+  (0, import_react4.useEffect)(() => {
+    if (job?.id) onBuildChanged?.(job.id);
+  }, [job?.id, onBuildChanged]);
+  async function act(action) {
+    const id = job?.id;
+    setBusy(true);
+    setError("");
+    try {
+      let args = { id: job?.id };
+      if (action === "buildStart") {
+        requestId.current ??= crypto.randomUUID();
+        args = { requestId: requestId.current, graphics };
+      }
+      if (action === "buildOpenFolder" && forDelivery) args.currentVersion = true;
+      const value = await api.call(action, args);
+      if (action === "buildStart") requestId.current = null;
+      if (!mounted.current) return;
+      if (action === "buildEvidence") {
+        if (currentId.current === id) setEvidence(value);
+      } else if (action === "buildOpenFolder") {
+        setNotice(value.message);
+        if (currentId.current === id) onBuildOpened?.(id);
+      } else setJob(value);
+    } catch (e42) {
+      if (mounted.current) {
+        if (action === "buildOpenFolder" && forDelivery) onBuildChanged?.(null);
+        setError(e42.message);
+      }
+    } finally {
+      if (mounted.current) setBusy(false);
+    }
+  }
+  return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("section", { className: "gw-runtime", "aria-label": "\u751F\u6210\u8BD5\u73A9\u5305", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("h2", { children: forDelivery ? "\u672C\u6B21\u8BD5\u73A9\u5305" : "\u4EA4\u7ED9\u522B\u4EBA\u8BD5\u73A9" }),
+    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { className: "gw-small gw-muted", children: forDelivery ? "\u53CC\u51FB\u8FD0\u884C\u6E38\u620F\uFF0C\u8BD5\u73A9\u540E\u586B\u5199\u7ED3\u8BBA\u3002" : "\u751F\u6210\u53EF\u53CC\u51FB\u8FD0\u884C\u7684 Windows \u8BD5\u73A9\u5305\uFF0C\u4E0D\u7528\u6253\u5F00\u7F16\u8F91\u5668\u3002\u4F7F\u7528\u72EC\u7ACB\u5B58\u6863\uFF0C\u4E0D\u8986\u76D6\u539F\u5DE5\u7A0B\uFF1B\u5F53\u524D\u652F\u6301 GDScript\uFF0C\u9700\u5DF2\u5B89\u88C5\u5BF9\u5E94\u5BFC\u51FA\u6A21\u677F\u3002" }),
+    /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("details", { className: "gw-small", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("summary", { children: "\u9047\u5230\u663E\u5361\u517C\u5BB9\u95EE\u9898" }),
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("label", { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("input", { type: "checkbox", checked: graphics === "angle", disabled: busy2 || active || disabled || Boolean(requestId.current), onChange: (event) => setGraphics(event.target.checked ? "angle" : "project") }),
+        "\u672C\u6B21\u8BD5\u73A9\u5305\u5C1D\u8BD5\u517C\u5BB9\u56FE\u5F62\u65B9\u5F0F"
+      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { children: "\u4EC5\u9002\u7528\u4E8E Compatibility \u5DE5\u7A0B\uFF0C\u4F7F\u7528 ANGLE / Direct3D 11\u3002\u53EA\u6539\u53D8\u672C\u6B21\u6784\u5EFA\u526F\u672C\uFF0C\u4E0D\u4FEE\u6539\u5DE5\u7A0B\uFF1B\u5E76\u975E\u6240\u6709\u663E\u5361\u95EE\u9898\u90FD\u80FD\u89E3\u51B3\u3002\u539F\u5931\u8D25\u8BB0\u5F55\u4FDD\u7559\uFF0C\u4ECD\u9700\u5B9E\u9645\u8BD5\u73A9\u3002" })
+    ] }),
+    /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "gw-start-actions", children: [
+      needsHelp && onAssist && /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("button", { className: "gw-primary", disabled: busy2 || disabled, onClick: () => onAssist(job), children: "\u8BA9 AI \u6392\u67E5\u8FD9\u6B21\u5931\u8D25" }),
+      active ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("button", { className: "gw-secondary", disabled: busy2 || job.status === "cancelling", onClick: () => act("buildCancel"), children: "\u53D6\u6D88\u672C\u6B21\u6784\u5EFA" }) : /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("button", { className: forDelivery && !job?.startupPassed && !needsHelp ? "gw-primary" : "gw-secondary", disabled: busy2 || disabled || unconfirmed || !engineConfigured, onClick: () => act("buildStart"), children: job ? "\u91CD\u65B0\u751F\u6210\u8BD5\u73A9\u5305" : "\u751F\u6210 Windows \u8BD5\u73A9\u5305" }),
+      job?.exportPassed && (!forDelivery || job.status === "ready") && /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("button", { className: job.startupPassed && !reviewing ? "gw-primary" : "gw-secondary", disabled: busy2 || active || unconfirmed || unverifiedSaves || forDelivery && disabled, onClick: () => act("buildOpenFolder"), children: "\u6253\u5F00\u8BD5\u73A9\u5305\u6587\u4EF6\u5939" })
+    ] }),
+    !engineConfigured && /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { className: "gw-small", children: "\u5148\u5728\u9879\u76EE\u8BBE\u7F6E\u4E2D\u914D\u7F6E Godot\u3002" }),
+    error && /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { role: "alert", children: error }),
+    notice && (!forDelivery || !reviewing) && /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { role: "status", children: notice }),
+    job && /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { "aria-live": "polite", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { children: /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("strong", { children: active ? job.status === "cancelling" ? "\u6B63\u5728\u53D6\u6D88" : phases[job.phase] ?? "\u6B63\u5728\u751F\u6210" : unconfirmed ? "\u539F\u6784\u5EFA\u72B6\u6001\u5F85\u786E\u8BA4" : job.status === "interrupted" ? "\u4E0A\u6B21\u6784\u5EFA\u672A\u5B8C\u6210" : unverifiedSaves ? "\u65E7\u8BD5\u73A9\u5305\u9700\u8981\u91CD\u65B0\u751F\u6210" : job.status === "ready" ? forDelivery ? "\u542F\u52A8\u68C0\u67E5\u901A\u8FC7 \xB7 \u5F85\u4F60\u8BD5\u73A9" : "\u8BD5\u73A9\u5305\u5DF2\u751F\u6210\uFF0C\u81EA\u52A8\u542F\u52A8\u68C0\u67E5\u901A\u8FC7" : job.exportPassed ? "\u6587\u4EF6\u5DF2\u751F\u6210\uFF0C\u542F\u52A8\u5C1A\u672A\u901A\u8FC7" : job.status === "cancelled" ? "\u672C\u6B21\u6784\u5EFA\u5DF2\u53D6\u6D88" : "\u6784\u5EFA\u672A\u5B8C\u6210" }) }),
+      !active && (!forDelivery || job.status !== "ready" || unverifiedSaves) && /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { children: unconfirmed || job.status === "interrupted" ? job.message : unverifiedSaves ? "\u65E7\u5305\u6CA1\u6709\u6838\u5B9E\u72EC\u7ACB\u5B58\u6863\u4F4D\u7F6E\u3002\u8BF7\u91CD\u65B0\u751F\u6210\uFF0C\u907F\u514D\u5F71\u54CD\u5DF2\u6709\u8FDB\u5EA6\u3002" : job.exportPassed && !job.startupPassed ? "\u6E38\u620F\u672A\u80FD\u6B63\u5E38\u5B8C\u6210\u542F\u52A8\u68C0\u67E5\u3002\u6587\u4EF6\u5DF2\u4FDD\u7559\uFF0C\u5148\u6392\u67E5\u539F\u56E0\u518D\u4EA4\u7ED9\u522B\u4EBA\u8BD5\u73A9\u3002" : needsHelp ? preparationGuidance ?? "\u8FD9\u6B21\u6CA1\u6709\u5B8C\u6210\u53EF\u73A9\u5305\u68C0\u67E5\u3002\u53EF\u4EE5\u8BA9 AI \u5148\u6392\u67E5\u539F\u56E0\uFF0C\u4E0D\u4F1A\u81EA\u52A8\u91CD\u8BD5\u6216\u4FEE\u6539\u6E38\u620F\u3002" : job.message }),
+      !active && !forDelivery && /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("p", { className: "gw-small gw-muted", children: [
+        new Date(job.startedAt).toLocaleString("zh-CN"),
+        " \xB7 \u81EA\u52A8\u542F\u52A8\u4E0D\u4EE3\u8868\u73A9\u6CD5\u6216\u4EBA\u5DE5\u8BD5\u73A9\u5DF2\u9A8C\u6536\u3002"
+      ] }),
+      job.graphics === "angle" && /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { className: "gw-small", children: "\u672C\u6B21\u9009\u62E9\u4E86\u517C\u5BB9\u56FE\u5F62\u65B9\u5F0F\uFF1B\u901A\u8FC7\u542F\u52A8\u68C0\u67E5\u4E0D\u4EE3\u8868\u5386\u53F2\u5D29\u6E83\u5DF2\u89E3\u51B3\u3002" }),
+      needsHelp && job.message && /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("details", { className: "gw-small", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("summary", { children: "\u4E13\u4E1A\u4FE1\u606F\uFF1A\u5931\u8D25\u63D0\u793A" }),
+        /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { style: { overflowWrap: "anywhere" }, children: job.message })
+      ] }),
+      job.output && /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("details", { className: "gw-small", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("summary", { children: "\u6587\u4EF6\u4FDD\u5B58\u4F4D\u7F6E" }),
+        /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { style: { overflowWrap: "anywhere" }, children: job.output })
+      ] }),
+      job.hasEvidence && /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("button", { className: "gw-secondary", disabled: busy2, "aria-expanded": Boolean(evidence), onClick: () => evidence ? setEvidence(null) : act("buildEvidence"), children: evidence ? "\u6536\u8D77\u6784\u5EFA\u4F9D\u636E" : "\u67E5\u770B\u6784\u5EFA\u4F9D\u636E" })
+    ] }),
+    evidence && /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { className: "gw-runtime-evidence", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { children: evidence.sourceState === "changed" ? "\u5DE5\u7A0B\u5DF2\u4FEE\u6539\uFF0C\u6B64\u5305\u5BF9\u5E94\u8F83\u65E9\u7248\u672C\u3002" : evidence.sourceState === "unchanged" ? "\u8BFB\u53D6\u4F9D\u636E\u65F6\uFF0C\u6E90\u6587\u4EF6\u4E0E\u672C\u6B21\u6784\u5EFA\u4E00\u81F4\u3002" : "\u6E90\u6587\u4EF6\u72B6\u6001\u5C1A\u672A\u6838\u5B9E\u3002" }),
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { children: evidence.failure?.next }),
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("ul", { children: evidence.limitations?.map((text) => /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("li", { children: text }, text)) }),
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("details", { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("summary", { children: "\u4E13\u4E1A\u4FE1\u606F\uFF1A\u6784\u5EFA\u65E5\u5FD7" }),
+        /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { children: evidence.message }),
+        Object.entries(evidence.checks ?? {}).map(([name2, check]) => /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("pre", { children: [
+          phases[name2] ?? name2,
+          " \xB7 \u9000\u51FA\u7801 ",
+          check.exitCode,
+          "\n",
+          check.stdout,
+          "\n",
+          check.stderr,
+          "\n",
+          check.fileLog,
+          check.displayTruncated ? "\n\uFF08\u5C55\u793A\u5DF2\u622A\u65AD\uFF0C\u5B8C\u6574\u65E5\u5FD7\u4FDD\u7559\u5728\u4EA7\u7269\u4E0A\u7EA7\u76EE\u5F55\uFF09" : ""
+        ] }, name2))
+      ] })
+    ] })
+  ] });
+}
+
+// src/Lifecycle.jsx
+var import_jsx_runtime4 = require("react/jsx-runtime");
 var actions = { prototype: "\u539F\u578B\u53EF\u884C\uFF0C\u8FDB\u5165\u4E0B\u4E00\u9636\u6BB5", production: "\u6A21\u5757\u5B8C\u6210\uFF0C\u5F00\u59CB\u6574\u5408", polish: "\u5F00\u59CB QA \u56DE\u5F52", qa: "\u56DE\u5F52\u5B8C\u6210\uFF0C\u8FDB\u5165\u6700\u7EC8\u8BD5\u73A9", release: "\u786E\u8BA4\u672C\u7248\u672C\u4EA4\u4ED8" };
-function Lifecycle({ status, api, busy: busy2, onSaved, onPlan, onDiagnose, onDesign, onRepair }) {
-  const [note, setNote] = (0, import_react4.useState)(""), [error, setError] = (0, import_react4.useState)(""), [saving, setSaving] = (0, import_react4.useState)(false);
+function Lifecycle({ status, api, busy: busy2, onSaved, onPlan, onDiagnose, onDesign, onRepair, onBuildAssist }) {
+  const [note, setNote] = (0, import_react5.useState)(""), [iterationNote, setIterationNote] = (0, import_react5.useState)(""), [error, setError] = (0, import_react5.useState)(""), [saving, setSaving] = (0, import_react5.useState)(false);
+  const [openedBuild, setOpenedBuild] = (0, import_react5.useState)(null);
   const value = status.lifecycle;
+  const reviewBasis = JSON.stringify([value?.version, value?.basis]);
+  const currentBuildId = openedBuild?.basis === reviewBasis ? openedBuild.id : void 0;
+  const onBuildChanged = (0, import_react5.useCallback)((id) => setOpenedBuild((previous) => previous?.id === id ? previous : null), []);
+  function recordOpenedBuild(id) {
+    if (currentBuildId !== id) setNote("");
+    setOpenedBuild({ id, basis: reviewBasis });
+  }
   async function adopt(mode) {
     setSaving(true);
     setError("");
@@ -1403,24 +1563,38 @@ function Lifecycle({ status, api, busy: busy2, onSaved, onPlan, onDiagnose, onDe
       setSaving(false);
     }
   }
-  if (!value?.mode) return status.approved ? /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("section", { className: "gw-next-action gw-lifecycle-card", "aria-label": "\u9009\u62E9\u5236\u4F5C\u76EE\u6807", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("strong", { children: "\u8FD9\u6B3E\u6E38\u620F\u51C6\u5907\u505A\u5230\u54EA\u4E00\u6B65\uFF1F" }),
-    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { className: "gw-small", children: "\u4FDD\u7559\u5DF2\u6709\u4EFB\u52A1\u548C\u8BD5\u73A9\u8BB0\u5F55\uFF0C\u4ECE\u5F53\u524D\u539F\u578B\u7EE7\u7EED\u3002" }),
-    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("button", { className: "gw-primary", disabled: busy2 || saving, onClick: () => adopt("full"), children: "\u7EE7\u7EED\u505A\u5B8C\u6574\u6E38\u620F" }),
-    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("button", { className: "gw-secondary", disabled: busy2 || saving, onClick: () => adopt("prototype"), children: "\u53EA\u9A8C\u8BC1\u539F\u578B" }),
-    error && /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { role: "alert", children: error })
+  if (!value?.mode) return status.approved ? /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("section", { className: "gw-next-action gw-lifecycle-card", "aria-label": "\u9009\u62E9\u5236\u4F5C\u76EE\u6807", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("strong", { children: "\u8FD9\u6B3E\u6E38\u620F\u51C6\u5907\u505A\u5230\u54EA\u4E00\u6B65\uFF1F" }),
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("p", { className: "gw-small", children: "\u4FDD\u7559\u5DF2\u6709\u4EFB\u52A1\u548C\u8BD5\u73A9\u8BB0\u5F55\uFF0C\u4ECE\u5F53\u524D\u539F\u578B\u7EE7\u7EED\u3002" }),
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("button", { className: "gw-primary", disabled: busy2 || saving, onClick: () => adopt("full"), children: "\u7EE7\u7EED\u505A\u5B8C\u6574\u6E38\u620F" }),
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("button", { className: "gw-secondary", disabled: busy2 || saving, onClick: () => adopt("prototype"), children: "\u53EA\u9A8C\u8BC1\u539F\u578B" }),
+    error && /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("p", { role: "alert", children: error })
   ] }) : null;
   async function change(action, targetStage, mode, statement) {
     setSaving(true);
     setError("");
     try {
-      let buildId;
-      if (action === "advance" && value.stage === "release") buildId = (await api.call("buildStatus"))?.id;
-      await api.call("lifecycleChange", { action, targetStage, mode, buildId, expectedVersion: value.version, expectedBasis: value.basis, statement: statement ?? note.trim() });
-      const reason = note.trim();
+      const buildId = action === "advance" && value.stage === "release" ? currentBuildId : void 0;
+      const decision = statement ?? note.trim();
+      await api.call("lifecycleChange", { action, targetStage, mode, buildId, expectedVersion: value.version, expectedBasis: value.basis, statement: decision });
       setNote("");
+      setIterationNote("");
+      setOpenedBuild(null);
       await onSaved();
-      if (action === "iterate" && onRepair) await onRepair(reason);
+      if (action === "iterate" && onRepair) await onRepair(decision);
+    } catch (e42) {
+      if (action === "advance" && value.stage === "release" && ["DELIVERY_REQUIRED", "BUILD_CHANGED", "BUILD_NOT_FOUND", "EVIDENCE_UNAVAILABLE", "SAVE_DIRECTORY_UNVERIFIED", "STALE_LIFECYCLE"].includes(e42.code)) setOpenedBuild(null);
+      setError(e42.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+  const deliveredBuild = value.stage === "delivered" ? value.history.findLast((item) => item.to === "delivered")?.delivery?.id : null;
+  async function openDeliveredBuild() {
+    setSaving(true);
+    setError("");
+    try {
+      await api.call("buildOpenFolder", { id: deliveredBuild, currentVersion: true });
     } catch (e42) {
       setError(e42.message);
     } finally {
@@ -1428,85 +1602,101 @@ function Lifecycle({ status, api, busy: busy2, onSaved, onPlan, onDiagnose, onDe
     }
   }
   const label = value.stages.find((s9) => s9.id === value.stage)?.label;
-  return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("section", { className: "gw-next-action gw-lifecycle-card", "aria-label": "\u6E38\u620F\u6574\u4F53\u8FDB\u7A0B", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("strong", { children: [
+  return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("section", { className: "gw-next-action gw-lifecycle-card", "aria-label": "\u6E38\u620F\u6574\u4F53\u8FDB\u7A0B", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("strong", { children: [
       label,
       " \xB7 \u7B2C ",
       value.iteration,
       " \u8F6E"
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { className: "gw-small", children: value.stale ? "\u5DE5\u7A0B\u5DF2\u6709\u53D8\u5316\uFF0C\u9700\u8981\u91CD\u65B0\u6838\u5BF9\u3002" : value.mode === "prototype" ? "\u5F53\u524D\u76EE\u6807\uFF1A\u4EA4\u4ED8\u53EF\u73A9\u7684\u539F\u578B\u3002" : "\u5F53\u524D\u76EE\u6807\uFF1A\u5B8C\u6210\u6574\u6B3E\u6E38\u620F\u3002" }),
-    value.stage === "design" ? /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(import_jsx_runtime3.Fragment, { children: [
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { className: "gw-small", children: "\u8865\u9F50\u8BBE\u8BA1\u4E0E\u6A21\u5757\u5B89\u6392\uFF0C\u518D\u786E\u8BA4\u8BA1\u5212\u5F00\u59CB\u5236\u4F5C\u3002" }),
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("button", { className: "gw-primary", disabled: busy2 || saving, onClick: onDesign, children: "\u8BF7 AI \u5B8C\u5584\u8BBE\u8BA1" }),
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("button", { className: "gw-secondary", onClick: onPlan, children: "\u67E5\u770B\u5F00\u53D1\u8BA1\u5212" })
-    ] }) : value.stage === "delivered" ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { className: "gw-small", children: "\u5DF2\u8BB0\u5F55\u672C\u7248\u672C\u7684\u6700\u7EC8\u8BD5\u73A9\u3002\u540E\u7EED\u4FEE\u6539\u9700\u8981\u91CD\u65B0\u68C0\u67E5\u3002" }) : /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(import_jsx_runtime3.Fragment, { children: [
-      value.blockers.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { className: "gw-small", children: value.blockers[0] }),
-      ["qa", "release"].includes(value.stage) && /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("button", { className: "gw-secondary", onClick: onDiagnose, children: "\u68C0\u67E5\u4E0E\u8BD5\u73A9\u5305" }),
-      value.stage === "qa" && /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(QaReview, { status, api, busy: busy2 || saving, onSaved }, `${status.planHash}:${value.basis.fingerprint}:${value.qa.version}`),
-      actions[value.stage] && value.canAdvance && /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(import_jsx_runtime3.Fragment, { children: [
-        /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("label", { className: "gw-small", children: [
-          "\u672C\u8F6E\u7ED3\u8BBA",
-          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("textarea", { "aria-label": "\u9636\u6BB5\u7ED3\u8BBA", value: note, onChange: (e42) => setNote(e42.target.value), placeholder: "\u4F8B\u5982\uFF1A\u6838\u5FC3\u5FAA\u73AF\u53EF\u884C\uFF0C\u7EE7\u7EED\u5B8C\u5584\u5B8C\u6574\u8BBE\u8BA1", maxLength: 2e3 })
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("p", { className: "gw-small", children: value.stale ? "\u5DE5\u7A0B\u5DF2\u6709\u53D8\u5316\uFF0C\u9700\u8981\u91CD\u65B0\u6838\u5BF9\u3002" : value.mode === "prototype" ? "\u5F53\u524D\u76EE\u6807\uFF1A\u4EA4\u4ED8\u53EF\u73A9\u7684\u539F\u578B\u3002" : "\u5F53\u524D\u76EE\u6807\uFF1A\u5B8C\u6210\u6574\u6B3E\u6E38\u620F\u3002" }),
+    value.stage === "design" ? /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(import_jsx_runtime4.Fragment, { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("p", { className: "gw-small", children: "\u8865\u9F50\u8BBE\u8BA1\u4E0E\u6A21\u5757\u5B89\u6392\uFF0C\u518D\u786E\u8BA4\u8BA1\u5212\u5F00\u59CB\u5236\u4F5C\u3002" }),
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("button", { className: "gw-primary", disabled: busy2 || saving, onClick: onDesign, children: "\u8BF7 AI \u5B8C\u5584\u8BBE\u8BA1" }),
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("button", { className: "gw-secondary", onClick: onPlan, children: "\u67E5\u770B\u5F00\u53D1\u8BA1\u5212" })
+    ] }) : value.stage === "delivered" ? /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(import_jsx_runtime4.Fragment, { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("p", { className: "gw-small", children: "\u5DF2\u8BB0\u5F55\u672C\u7248\u672C\u7684\u6700\u7EC8\u8BD5\u73A9\u3002\u540E\u7EED\u4FEE\u6539\u9700\u8981\u91CD\u65B0\u68C0\u67E5\u3002" }),
+      deliveredBuild && /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("button", { className: "gw-primary", disabled: busy2 || saving, onClick: openDeliveredBuild, children: "\u6253\u5F00\u5DF2\u4EA4\u4ED8\u6587\u4EF6\u5939" })
+    ] }) : /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(import_jsx_runtime4.Fragment, { children: [
+      value.blockers.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("p", { className: "gw-small", children: value.blockers[0] }),
+      value.stage === "qa" && !value.engineeringReady && /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("button", { className: "gw-secondary", onClick: onDiagnose, children: "\u67E5\u770B\u5DE5\u7A0B\u68C0\u67E5" }),
+      value.stage === "qa" && /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(QaReview, { status, api, busy: busy2 || saving, onSaved }, `${status.planHash}:${value.basis.fingerprint}:${value.qa.version}`),
+      value.stage === "release" && /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(
+        PlayableBuild,
+        {
+          api,
+          engineConfigured: Boolean(status.configuration?.enginePath),
+          disabled: busy2 || saving || !value.canAdvance,
+          onAssist: onBuildAssist,
+          forDelivery: true,
+          reviewing: Boolean(currentBuildId),
+          onBuildOpened: recordOpenedBuild,
+          onBuildChanged
+        }
+      ),
+      actions[value.stage] && value.canAdvance && (value.stage !== "release" || currentBuildId) && /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(import_jsx_runtime4.Fragment, { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("label", { className: "gw-small", children: [
+          value.stage === "release" ? "\u8BD5\u73A9\u7ED3\u8BBA" : "\u672C\u8F6E\u7ED3\u8BBA",
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("textarea", { "aria-label": "\u9636\u6BB5\u7ED3\u8BBA", value: note, onChange: (e42) => setNote(e42.target.value), placeholder: value.stage === "release" ? "\u5199\u4E0B\u4F60\u5728\u8FD9\u4E2A\u8BD5\u73A9\u5305\u91CC\u6838\u5BF9\u7684\u7ED3\u679C" : "\u4F8B\u5982\uFF1A\u6838\u5FC3\u5FAA\u73AF\u53EF\u884C\uFF0C\u7EE7\u7EED\u5B8C\u5584\u5B8C\u6574\u8BBE\u8BA1", maxLength: 2e3 })
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("button", { className: "gw-primary", disabled: busy2 || saving || !note.trim() || !value.canAdvance, onClick: () => change("advance"), children: actions[value.stage] })
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("button", { className: "gw-primary", disabled: busy2 || saving || !note.trim(), onClick: () => change("advance"), children: actions[value.stage] })
       ] })
     ] }),
-    value.stage !== "direction" && /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("details", { children: [
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("summary", { children: "\u9700\u8981\u518D\u6539\u4E00\u8F6E" }),
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("label", { className: "gw-small", children: [
+    value.stage !== "direction" && /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("details", { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("summary", { children: "\u9700\u8981\u518D\u6539\u4E00\u8F6E" }),
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("label", { className: "gw-small", children: [
         "\u8C03\u6574\u539F\u56E0",
-        /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("textarea", { "aria-label": "\u8FED\u4EE3\u539F\u56E0", value: note, onChange: (e42) => setNote(e42.target.value), maxLength: 2e3 })
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("textarea", { "aria-label": "\u8FED\u4EE3\u539F\u56E0", value: iterationNote, onChange: (e42) => setIterationNote(e42.target.value), maxLength: 2e3 })
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("button", { className: "gw-secondary", disabled: busy2 || saving || !note.trim(), onClick: () => change("iterate", value.mode === "prototype" || ["prototype", "design"].includes(value.stage) ? "prototype" : "production"), children: "\u8BB0\u5F55\u5E76\u8FD4\u56DE\u5236\u4F5C" })
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("button", { className: "gw-secondary", disabled: busy2 || saving || !iterationNote.trim(), onClick: () => change("iterate", value.mode === "prototype" || ["prototype", "design"].includes(value.stage) ? "prototype" : "production", void 0, iterationNote.trim()), children: "\u8BB0\u5F55\u5E76\u8FD4\u56DE\u5236\u4F5C" })
     ] }),
-    error && /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { role: "alert", children: error }),
-    value.mode === "prototype" && /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("details", { children: [
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("summary", { children: "\u7EE7\u7EED\u505A\u5B8C\u6574\u6E38\u620F" }),
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { className: "gw-small", children: "\u4FDD\u7559\u539F\u578B\u8BB0\u5F55\uFF0C\u5148\u5B8C\u5584\u8BBE\u8BA1\uFF0C\u518D\u5206\u6A21\u5757\u5236\u4F5C\u3002" }),
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("button", { className: "gw-secondary", disabled: busy2 || saving, onClick: () => change("mode", void 0, "full", "\u7528\u6237\u9009\u62E9\u7531\u539F\u578B\u7EE7\u7EED\u5B8C\u6574\u6E38\u620F\u5236\u4F5C"), children: "\u91C7\u7528\u5B8C\u6574\u5236\u4F5C\u6D41\u7A0B" })
+    error && /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("p", { role: "alert", children: error }),
+    value.mode === "prototype" && /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("details", { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("summary", { children: "\u7EE7\u7EED\u505A\u5B8C\u6574\u6E38\u620F" }),
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("p", { className: "gw-small", children: "\u4FDD\u7559\u539F\u578B\u8BB0\u5F55\uFF0C\u5148\u5B8C\u5584\u8BBE\u8BA1\uFF0C\u518D\u5206\u6A21\u5757\u5236\u4F5C\u3002" }),
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("button", { className: "gw-secondary", disabled: busy2 || saving, onClick: () => change("mode", void 0, "full", "\u7528\u6237\u9009\u62E9\u7531\u539F\u578B\u7EE7\u7EED\u5B8C\u6574\u6E38\u620F\u5236\u4F5C"), children: "\u91C7\u7528\u5B8C\u6574\u5236\u4F5C\u6D41\u7A0B" })
     ] }),
-    value.qa.total > 0 && /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("details", { children: [
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("summary", { children: [
+    value.qa.total > 0 && /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("details", { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("summary", { children: [
         "\u5386\u6B21\u6D4B\u8BD5\uFF08",
         value.qa.total,
         " \u8F6E\uFF09"
       ] }),
-      value.qa.history.map((run) => /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("details", { children: [
-        /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("summary", { children: [
+      value.qa.history.map((run) => /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("details", { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("summary", { children: [
           new Date(run.at).toLocaleString("zh-CN"),
           " \xB7 ",
           run.results.filter((r7) => r7.outcome === "failed").length,
           " \u9879\u95EE\u9898"
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("ul", { children: run.results.map((r7) => /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("li", { children: [
-          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("strong", { children: r7.target }),
-          /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("p", { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("ul", { children: run.results.map((r7) => /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("li", { children: [
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("strong", { children: r7.target }),
+          /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("p", { children: [
             r7.outcome === "passed" ? "\u5DF2\u8BB0\u5F55\u901A\u8FC7" : r7.outcome === "failed" ? "\u53D1\u73B0\u95EE\u9898" : "\u5C1A\u672A\u6D4B\u8BD5",
             r7.note ? `\uFF1A${r7.note}` : ""
           ] })
         ] }, r7.number)) })
       ] }, run.id)),
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { className: "gw-small", children: "\u663E\u793A\u6700\u8FD1\u4E94\u8F6E\u3002\u5386\u53F2\u901A\u8FC7\u4E0D\u4EE3\u8868\u5F53\u524D\u7248\u672C\u901A\u8FC7\u3002" })
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("p", { className: "gw-small", children: "\u663E\u793A\u6700\u8FD1\u4E94\u8F6E\u3002\u5386\u53F2\u901A\u8FC7\u4E0D\u4EE3\u8868\u5F53\u524D\u7248\u672C\u901A\u8FC7\u3002" })
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("details", { children: [
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("summary", { children: "\u9636\u6BB5\u8BB0\u5F55" }),
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("ol", { children: value.history.map((item, index) => /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("li", { children: item.statement }, index)) }),
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { className: "gw-small", children: "\u5DE5\u7A0B\u68C0\u67E5\u4E0E\u4EBA\u5DE5\u8BD5\u73A9\u5206\u522B\u8BB0\u5F55\u3002" })
+    /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("details", { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("summary", { children: "\u9636\u6BB5\u8BB0\u5F55" }),
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("ol", { children: value.history.map((item, index) => /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("li", { children: item.statement }, index)) }),
+      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("p", { className: "gw-small", children: "\u5DE5\u7A0B\u68C0\u67E5\u4E0E\u4EBA\u5DE5\u8BD5\u73A9\u5206\u522B\u8BB0\u5F55\u3002" })
     ] })
   ] });
 }
 
 // src/TaskOverview.jsx
-var import_react6 = __toESM(require("react"), 1);
+var import_react7 = __toESM(require("react"), 1);
 
 // src/AcceptanceCoverage.jsx
-var import_react5 = __toESM(require("react"), 1);
-var import_jsx_runtime4 = require("react/jsx-runtime");
+var import_react6 = __toESM(require("react"), 1);
+var import_jsx_runtime5 = require("react/jsx-runtime");
 function AcceptanceCoverage({ coverage, label = "\u65B9\u6848\u9A8C\u6536" }) {
   if (!coverage?.total) return null;
-  return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("section", { className: "gw-development-report", "aria-label": `${label}\u8986\u76D6`, children: [
-    /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("h2", { children: [
+  return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("section", { className: "gw-development-report", "aria-label": `${label}\u8986\u76D6`, children: [
+    /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("h2", { children: [
       label,
       "\uFF1A",
       coverage.reviewed,
@@ -1514,28 +1704,28 @@ function AcceptanceCoverage({ coverage, label = "\u65B9\u6848\u9A8C\u6536" }) {
       coverage.total,
       " \u9879\u5DF2\u8BB0\u5F55\u901A\u8FC7"
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("p", { className: "gw-small gw-muted", children: coverage.note }),
-    coverage.needsReview > 0 && /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("p", { role: "status", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("p", { className: "gw-small gw-muted", children: coverage.note }),
+    coverage.needsReview > 0 && /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("p", { role: "status", children: [
       "\u6709 ",
       coverage.needsReview,
       " \u9879\u5386\u53F2\u9A8C\u6536\u9700\u8981\u91CD\u65B0\u6838\u5BF9\uFF0C\u5F53\u524D\u6587\u4EF6\u7248\u672C\u5C1A\u4E0D\u80FD\u5224\u4E3A\u5168\u90E8\u5B8C\u6210\u3002"
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("details", { children: [
-      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("summary", { children: "\u67E5\u770B\u9010\u9879\u8986\u76D6\u4E0E\u7F3A\u53E3" }),
-      coverage.items.map((item) => /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { children: [
-        /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("p", { children: [
+    /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("details", { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("summary", { children: "\u67E5\u770B\u9010\u9879\u8986\u76D6\u4E0E\u7F3A\u53E3" }),
+      coverage.items.map((item) => /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("div", { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("p", { children: [
           item.number,
           ". ",
           item.text
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("p", { className: "gw-small", children: item.status === "reviewed" ? `\u4EBA\u5DE5\u901A\u8FC7\u8BB0\u5F55\uFF1A${item.reviewedTasks.map((task) => `${task.title}\uFF08${{ "files-unchanged": "\u626B\u63CF\u6587\u4EF6\u672A\u53D8", changed: "\u6587\u4EF6\u5DF2\u53D8\u5316", unverified: "\u57FA\u7EBF\u4E0D\u8DB3\u6216\u626B\u63CF\u4E0D\u5B8C\u6574", "not-compared": "\u5386\u53F2\u7248\u672C\u672A\u6BD4\u5BF9\u5F53\u524D\u6587\u4EF6" }[task.currency]}\uFF09`).join("\u3001")}` : item.status === "planned" ? `\u5DF2\u5B89\u6392\u3001\u5F85\u9A8C\u6536\uFF1A${item.plannedTasks.map((task) => task.title).join("\u3001")}` : "\u5C1A\u672A\u5173\u8054\u5F00\u53D1\u4EFB\u52A1\u6216\u4EBA\u5DE5\u9A8C\u6536" })
+        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("p", { className: "gw-small", children: item.status === "reviewed" ? `\u4EBA\u5DE5\u901A\u8FC7\u8BB0\u5F55\uFF1A${item.reviewedTasks.map((task) => `${task.title}\uFF08${{ "files-unchanged": "\u626B\u63CF\u6587\u4EF6\u672A\u53D8", changed: "\u6587\u4EF6\u5DF2\u53D8\u5316", unverified: "\u57FA\u7EBF\u4E0D\u8DB3\u6216\u626B\u63CF\u4E0D\u5B8C\u6574", "not-compared": "\u5386\u53F2\u7248\u672C\u672A\u6BD4\u5BF9\u5F53\u524D\u6587\u4EF6" }[task.currency]}\uFF09`).join("\u3001")}` : item.status === "planned" ? `\u5DF2\u5B89\u6392\u3001\u5F85\u9A8C\u6536\uFF1A${item.plannedTasks.map((task) => task.title).join("\u3001")}` : "\u5C1A\u672A\u5173\u8054\u5F00\u53D1\u4EFB\u52A1\u6216\u4EBA\u5DE5\u9A8C\u6536" })
       ] }, item.number))
     ] })
   ] });
 }
 
 // src/TaskOverview.jsx
-var import_jsx_runtime5 = require("react/jsx-runtime");
+var import_jsx_runtime6 = require("react/jsx-runtime");
 function TaskOverview({ status, renderTask, onDiagnose }) {
   const current = status.tasks.filter((task) => task.currentPlan);
   const groups = [
@@ -1547,50 +1737,50 @@ function TaskOverview({ status, renderTask, onDiagnose }) {
   const select = (key4) => current.filter((task) => key4 === "attention" ? ["failed", "cancelled"].includes(task.status) : task.status === key4);
   const report = status.latestDiagnosis;
   const checkText = !report ? "\u5C1A\u672A\u68C0\u67E5" : report.stale ? "\u9700\u8981\u91CD\u65B0\u68C0\u67E5" : report.coverage?.engineImport === "passed" && !report.issues?.some((issue) => issue.severity === "blocking") ? "\u5DE5\u7A0B\u68C0\u67E5\u5DF2\u901A\u8FC7" : "\u67E5\u770B\u68C0\u67E5\u7ED3\u679C";
-  return /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)(import_jsx_runtime5.Fragment, { children: [
-    /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("section", { className: "gw-overview-cards", "aria-label": "\u9879\u76EE\u5F53\u524D\u72B6\u6001", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("article", { children: [
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { children: "\u672C\u6B21\u8BD5\u73A9" }),
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("strong", { children: [
+  return /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)(import_jsx_runtime6.Fragment, { children: [
+    /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("section", { className: "gw-overview-cards", "aria-label": "\u9879\u76EE\u5F53\u524D\u72B6\u6001", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("article", { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { children: "\u672C\u6B21\u8BD5\u73A9" }),
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("strong", { children: [
           select("awaiting-review").length,
           " ",
-          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("small", { children: "\u9879\u5F85\u4F53\u9A8C" })
+          /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("small", { children: "\u9879\u5F85\u4F53\u9A8C" })
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("p", { children: "\u8BD5\u73A9\u540E\u518D\u8BB0\u5F55\u662F\u5426\u901A\u8FC7\u3002" })
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("p", { children: "\u8BD5\u73A9\u540E\u518D\u8BB0\u5F55\u662F\u5426\u901A\u8FC7\u3002" })
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("article", { children: [
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("span", { children: "\u5DE5\u7A0B\u68C0\u67E5" }),
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("strong", { children: checkText }),
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("button", { className: "gw-text-action", onClick: onDiagnose, children: "\u67E5\u770B\u8BCA\u65AD" })
+      /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("article", { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("span", { children: "\u5DE5\u7A0B\u68C0\u67E5" }),
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("strong", { children: checkText }),
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("button", { className: "gw-text-action", onClick: onDiagnose, children: "\u67E5\u770B\u8BCA\u65AD" })
       ] })
     ] }),
-    !current.length && /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "gw-empty", children: status.approved ? "\u8BA1\u5212\u5DF2\u786E\u8BA4\uFF0C\u53EF\u4EE5\u5F00\u59CB\u7B2C\u4E00\u6B65\u5236\u4F5C\u3002" : "\u5148\u786E\u8BA4\u8BA1\u5212\uFF0C\u518D\u5F00\u59CB\u5236\u4F5C\u3002" }),
+    !current.length && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { className: "gw-empty", children: status.approved ? "\u8BA1\u5212\u5DF2\u786E\u8BA4\uFF0C\u53EF\u4EE5\u5F00\u59CB\u7B2C\u4E00\u6B65\u5236\u4F5C\u3002" : "\u5148\u786E\u8BA4\u8BA1\u5212\uFF0C\u518D\u5F00\u59CB\u5236\u4F5C\u3002" }),
     groups.map(([key4, title, hint]) => {
       const tasks = select(key4);
-      return tasks.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("section", { className: "gw-task-group", "aria-label": title, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("header", { children: [
-          /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("h2", { children: [
+      return tasks.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("section", { className: "gw-task-group", "aria-label": title, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("header", { children: [
+          /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("h2", { children: [
             title,
             " ",
-            /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("small", { children: tasks.length })
+            /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("small", { children: tasks.length })
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("p", { children: hint })
+          /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("p", { children: hint })
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "gw-task-grid", children: tasks.map(renderTask) })
+        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { className: "gw-task-grid", children: tasks.map(renderTask) })
       ] }, key4);
     }),
-    /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("details", { className: "gw-overview-details", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("summary", { children: [
+    /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("details", { className: "gw-overview-details", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("summary", { children: [
         "\u5DF2\u901A\u8FC7\u4E0E\u5386\u53F2\u4EFB\u52A1 \xB7 ",
         status.tasks.length - current.filter((t5) => t5.status !== "accepted").length
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("div", { className: "gw-task-grid", children: status.tasks.filter((task) => !task.currentPlan || task.status === "accepted").map(renderTask) })
+      /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("div", { className: "gw-task-grid", children: status.tasks.filter((task) => !task.currentPlan || task.status === "accepted").map(renderTask) })
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime5.jsxs)("details", { className: "gw-overview-details", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("summary", { children: "\u5168\u90E8\u8BD5\u73A9\u76EE\u6807\u4E0E\u8303\u56F4" }),
-      /* @__PURE__ */ (0, import_jsx_runtime5.jsx)(AcceptanceCoverage, { coverage: status.acceptanceCoverage }),
-      /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("h3", { children: "\u8FD9\u6B21\u6682\u4E0D\u505A" }),
-      /* @__PURE__ */ (0, import_jsx_runtime5.jsx)("p", { children: status.plan?.outOfScope?.join("\uFF1B") || "\u5C1A\u672A\u660E\u786E" })
+    /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("details", { className: "gw-overview-details", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("summary", { children: "\u5168\u90E8\u8BD5\u73A9\u76EE\u6807\u4E0E\u8303\u56F4" }),
+      /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(AcceptanceCoverage, { coverage: status.acceptanceCoverage }),
+      /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("h3", { children: "\u8FD9\u6B21\u6682\u4E0D\u505A" }),
+      /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("p", { children: status.plan?.outOfScope?.join("\uFF1B") || "\u5C1A\u672A\u660E\u786E" })
     ] })
   ] });
 }
@@ -1623,18 +1813,18 @@ function updateNotifications(previous, versions, page) {
 }
 
 // src/use-deliverable-notices.js
-var import_react7 = require("react");
+var import_react8 = require("react");
 function useDeliverableNotices(status, page) {
-  const cache = (0, import_react7.useRef)(/* @__PURE__ */ new Map()), sound = (0, import_react7.useRef)(null);
-  const [unread, setUnread] = (0, import_react7.useState)({});
-  const [muted, setMuted] = (0, import_react7.useState)(() => {
+  const cache = (0, import_react8.useRef)(/* @__PURE__ */ new Map()), sound = (0, import_react8.useRef)(null);
+  const [unread, setUnread] = (0, import_react8.useState)({});
+  const [muted, setMuted] = (0, import_react8.useState)(() => {
     try {
       return localStorage.getItem("gw-notice-muted") === "true";
     } catch {
       return false;
     }
   });
-  (0, import_react7.useEffect)(() => {
+  (0, import_react8.useEffect)(() => {
     const unlock = () => {
       try {
         const Audio = window.AudioContext || window.webkitAudioContext;
@@ -1656,7 +1846,7 @@ function useDeliverableNotices(status, page) {
       sound.current = null;
     };
   }, []);
-  (0, import_react7.useEffect)(() => {
+  (0, import_react8.useEffect)(() => {
     if (!status?.projectRoot) return;
     const key4 = `gw-deliverables:${status.projectRoot}`;
     let previous = cache.current.get(key4);
@@ -1702,33 +1892,33 @@ function useDeliverableNotices(status, page) {
 }
 
 // src/ProjectLessons.jsx
-var import_react8 = __toESM(require("react"), 1);
-var import_jsx_runtime6 = require("react/jsx-runtime");
+var import_react9 = __toESM(require("react"), 1);
+var import_jsx_runtime7 = require("react/jsx-runtime");
 function Candidate({ item, busy: busy2, onReview, onExport }) {
   const basis = item.review?.status === "approved" ? item.review : item.lesson ?? item.review;
-  const [draft, setDraft] = (0, import_react8.useState)(() => ({ title: basis?.title ?? item.title, content: basis?.content ?? item.detail, category: basis?.category ?? "engineering", applicability: basis?.applicability ?? "", verification: basis?.verification ?? "", limitations: basis?.limitations ?? "" }));
-  const [confirmed, setConfirmed] = (0, import_react8.useState)(false);
-  const [shareConfirmed, setShareConfirmed] = (0, import_react8.useState)(false);
-  const field = (key4, label, max) => /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("label", { children: [
+  const [draft, setDraft] = (0, import_react9.useState)(() => ({ title: basis?.title ?? item.title, content: basis?.content ?? item.detail, category: basis?.category ?? "engineering", applicability: basis?.applicability ?? "", verification: basis?.verification ?? "", limitations: basis?.limitations ?? "" }));
+  const [confirmed, setConfirmed] = (0, import_react9.useState)(false);
+  const [shareConfirmed, setShareConfirmed] = (0, import_react9.useState)(false);
+  const field = (key4, label, max) => /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("label", { children: [
     label,
-    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("textarea", { "aria-label": label, rows: 2, maxLength: max, value: draft[key4], onChange: (e42) => setDraft({ ...draft, [key4]: e42.target.value }) })
+    /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("textarea", { "aria-label": label, rows: 2, maxLength: max, value: draft[key4], onChange: (e42) => setDraft({ ...draft, [key4]: e42.target.value }) })
   ] });
-  return /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("details", { className: "gw-development-report gw-lesson-candidate", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("summary", { children: [
+  return /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("details", { className: "gw-development-report gw-lesson-candidate", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("summary", { children: [
       item.title,
       " \xB7 ",
       item.stale ? "\u6765\u6E90\u5DF2\u66F4\u65B0\uFF0C\u6682\u505C\u68C0\u7D22" : item.review?.status === "approved" ? "\u5DF2\u7EB3\u5165\u672C\u9879\u76EE\u68C0\u7D22" : item.review?.status === "revoked" ? "\u5DF2\u64A4\u56DE" : !item.imported && item.certainty !== "hypothesis" && item.evidenceRefs.length ? "\u81EA\u52A8\u6C89\u6DC0 \xB7 \u53EF\u68C0\u7D22\uFF0C\u5F85\u6838\u5BF9" : "\u5F85\u6838\u5BF9 \xB7 \u6682\u4E0D\u68C0\u7D22"
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("p", { children: item.detail }),
-    /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("p", { className: "gw-small gw-muted", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("p", { children: item.detail }),
+    /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("p", { className: "gw-small gw-muted", children: [
       "\u539F\u5206\u6790\uFF1A",
       item.certainty === "hypothesis" ? "\u5047\u8BBE\uFF0C\u5C1A\u672A\u8BC1\u5B9E" : "\u6709\u6765\u6E90\u8BB0\u5F55\uFF0C\u4ECD\u9700\u6838\u5BF9",
       "\u3002"
     ] }),
-    item.imported && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("p", { className: "gw-small", children: "\u624B\u52A8\u5BFC\u5165\u7684\u7ECF\u9A8C\u3002\u6765\u6E90\u4E0E\u9A8C\u8BC1\u7ED3\u679C\u7531\u63D0\u4F9B\u8005\u58F0\u660E\uFF1B\u9700\u6838\u5BF9\u662F\u5426\u9002\u7528\u5F53\u524D\u9879\u76EE\uFF0C\u6765\u6E90\u66F4\u65B0\u6216\u64A4\u56DE\u4E0D\u4F1A\u81EA\u52A8\u540C\u6B65\u3002" }),
-    /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("details", { children: [
-      /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("summary", { children: "\u67E5\u770B\u6765\u6E90\u8BB0\u5F55" }),
-      /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("p", { className: "gw-small gw-path", children: [
+    item.imported && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("p", { className: "gw-small", children: "\u624B\u52A8\u5BFC\u5165\u7684\u7ECF\u9A8C\u3002\u6765\u6E90\u4E0E\u9A8C\u8BC1\u7ED3\u679C\u7531\u63D0\u4F9B\u8005\u58F0\u660E\uFF1B\u9700\u6838\u5BF9\u662F\u5426\u9002\u7528\u5F53\u524D\u9879\u76EE\uFF0C\u6765\u6E90\u66F4\u65B0\u6216\u64A4\u56DE\u4E0D\u4F1A\u81EA\u52A8\u540C\u6B65\u3002" }),
+    /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("details", { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("summary", { children: "\u67E5\u770B\u6765\u6E90\u8BB0\u5F55" }),
+      /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("p", { className: "gw-small gw-path", children: [
         "\u62A5\u544A\uFF1A",
         item.reportId,
         "\u3002\u5F15\u7528\uFF1A",
@@ -1737,36 +1927,36 @@ function Candidate({ item, busy: busy2, onReview, onExport }) {
     ] }),
     field("title", "\u7ECF\u9A8C\u6807\u9898", 120),
     field("content", "\u6838\u5BF9\u540E\u7684\u7ECF\u9A8C\u5185\u5BB9", 2e3),
-    /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("label", { children: [
+    /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("label", { children: [
       "\u77E5\u8BC6\u5206\u7C7B",
-      /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("select", { className: "gw-execution-select", "aria-label": "\u77E5\u8BC6\u5206\u7C7B", value: draft.category, onChange: (e42) => setDraft({ ...draft, category: e42.target.value }), children: [["engine", "\u5F15\u64CE"], ["design", "\u8BBE\u8BA1"], ["engineering", "\u5DE5\u7A0B"], ["feel", "\u624B\u611F"], ["production", "\u751F\u4EA7\u7BA1\u7406"]].map(([key4, label]) => /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("option", { value: key4, children: label }, key4)) })
+      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("select", { className: "gw-execution-select", "aria-label": "\u77E5\u8BC6\u5206\u7C7B", value: draft.category, onChange: (e42) => setDraft({ ...draft, category: e42.target.value }), children: [["engine", "\u5F15\u64CE"], ["design", "\u8BBE\u8BA1"], ["engineering", "\u5DE5\u7A0B"], ["feel", "\u624B\u611F"], ["production", "\u751F\u4EA7\u7BA1\u7406"]].map(([key4, label]) => /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("option", { value: key4, children: label }, key4)) })
     ] }),
     field("applicability", "\u9002\u7528\u6761\u4EF6\u4E0E\u7248\u672C", 1e3),
     field("verification", "\u5B9E\u9645\u9A8C\u8BC1\u6B65\u9AA4\u4E0E\u7ED3\u679C", 2e3),
     field("limitations", "\u8FB9\u754C\u3001\u53CD\u4F8B\u4E0E\u672A\u8986\u76D6\u9879", 1e3),
-    /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("label", { className: "gw-lesson-confirm", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("input", { type: "checkbox", checked: confirmed, onChange: (e42) => setConfirmed(e42.target.checked) }),
+    /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("label", { className: "gw-lesson-confirm", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("input", { type: "checkbox", checked: confirmed, onChange: (e42) => setConfirmed(e42.target.checked) }),
       "\u6211\u5DF2\u6838\u5BF9\u4EE5\u4E0A\u5185\u5BB9\uFF0C\u540C\u610F\u4EC5\u7528\u4E8E\u672C\u9879\u76EE\u68C0\u7D22\u3002"
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { className: "gw-recipe-actions", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("button", { className: "gw-secondary", disabled: busy2 || item.stale || !confirmed || Object.values(draft).some((value) => !value.trim()), onClick: () => onReview(item, { action: "approve", ...draft }), children: "\u7EB3\u5165\u672C\u9879\u76EE\u77E5\u8BC6" }),
-      (item.review?.status === "approved" || !item.imported && !item.review && item.certainty !== "hypothesis" && item.evidenceRefs.length > 0) && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("button", { className: "gw-secondary", disabled: busy2, onClick: () => onReview(item, { action: "revoke" }), children: "\u64A4\u56DE\u68C0\u7D22" })
+    /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "gw-recipe-actions", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("button", { className: "gw-secondary", disabled: busy2 || item.stale || !confirmed || Object.values(draft).some((value) => !value.trim()), onClick: () => onReview(item, { action: "approve", ...draft }), children: "\u7EB3\u5165\u672C\u9879\u76EE\u77E5\u8BC6" }),
+      (item.review?.status === "approved" || !item.imported && !item.review && item.certainty !== "hypothesis" && item.evidenceRefs.length > 0) && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("button", { className: "gw-secondary", disabled: busy2, onClick: () => onReview(item, { action: "revoke" }), children: "\u64A4\u56DE\u68C0\u7D22" })
     ] }),
-    item.review?.status === "approved" && !item.stale && /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("details", { children: [
-      /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("summary", { children: "\u5BFC\u51FA\u7ECF\u9A8C\u4F9B\u5176\u4ED6\u9879\u76EE\u4F7F\u7528" }),
-      /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("p", { className: "gw-small", children: "\u5C06\u5BFC\u51FA\u4E0A\u65B9\u516D\u4E2A\u5B57\u6BB5\u53CA\u6765\u6E90\u6807\u8BC6\uFF0C\u4E0D\u9644\u5E26\u5DE5\u7A0B\u3001\u65E5\u5FD7\u6216\u539F\u62A5\u544A\u3002\u53EF\u5148\u5728\u4E0A\u65B9\u6539\u5199\u8131\u654F\uFF1B\u5BFC\u51FA\u4E0D\u4F1A\u6539\u52A8\u672C\u9879\u76EE\u5BA1\u6838\u8BB0\u5F55\u3002\u81EA\u52A8\u68C0\u67E5\u65E0\u6CD5\u8BC6\u522B\u6240\u6709\u79C1\u6709\u540D\u79F0\u548C\u672A\u516C\u5F00\u8BBE\u8BA1\u3002" }),
-      /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("label", { className: "gw-lesson-confirm", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("input", { type: "checkbox", checked: shareConfirmed, onChange: (e42) => setShareConfirmed(e42.target.checked) }),
+    item.review?.status === "approved" && !item.stale && /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("details", { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("summary", { children: "\u5BFC\u51FA\u7ECF\u9A8C\u4F9B\u5176\u4ED6\u9879\u76EE\u4F7F\u7528" }),
+      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("p", { className: "gw-small", children: "\u5C06\u5BFC\u51FA\u4E0A\u65B9\u516D\u4E2A\u5B57\u6BB5\u53CA\u6765\u6E90\u6807\u8BC6\uFF0C\u4E0D\u9644\u5E26\u5DE5\u7A0B\u3001\u65E5\u5FD7\u6216\u539F\u62A5\u544A\u3002\u53EF\u5148\u5728\u4E0A\u65B9\u6539\u5199\u8131\u654F\uFF1B\u5BFC\u51FA\u4E0D\u4F1A\u6539\u52A8\u672C\u9879\u76EE\u5BA1\u6838\u8BB0\u5F55\u3002\u81EA\u52A8\u68C0\u67E5\u65E0\u6CD5\u8BC6\u522B\u6240\u6709\u79C1\u6709\u540D\u79F0\u548C\u672A\u516C\u5F00\u8BBE\u8BA1\u3002" }),
+      /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("label", { className: "gw-lesson-confirm", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("input", { type: "checkbox", checked: shareConfirmed, onChange: (e42) => setShareConfirmed(e42.target.checked) }),
         "\u6211\u6709\u6743\u5206\u4EAB\uFF0C\u5E76\u5DF2\u68C0\u67E5\u4E0A\u65B9\u5185\u5BB9\u3001\u5220\u9664\u79C1\u6709\u4FE1\u606F\u3002"
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("button", { className: "gw-secondary", disabled: busy2 || !shareConfirmed, onClick: () => onExport(item, draft), children: "\u4E0B\u8F7D\u8131\u654F\u7ECF\u9A8C\u5305" })
+      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("button", { className: "gw-secondary", disabled: busy2 || !shareConfirmed, onClick: () => onExport(item, draft), children: "\u4E0B\u8F7D\u8131\u654F\u7ECF\u9A8C\u5305" })
     ] })
   ] });
 }
 function ProjectLessons({ api }) {
-  const [data, setData] = (0, import_react8.useState)(null), [error, setError] = (0, import_react8.useState)(""), [busy2, setBusy] = (0, import_react8.useState)(false);
-  const [incoming, setIncoming] = (0, import_react8.useState)(null), [importConfirmed, setImportConfirmed] = (0, import_react8.useState)(false), [notice, setNotice] = (0, import_react8.useState)("");
-  (0, import_react8.useEffect)(() => {
+  const [data, setData] = (0, import_react9.useState)(null), [error, setError] = (0, import_react9.useState)(""), [busy2, setBusy] = (0, import_react9.useState)(false);
+  const [incoming, setIncoming] = (0, import_react9.useState)(null), [importConfirmed, setImportConfirmed] = (0, import_react9.useState)(false), [notice, setNotice] = (0, import_react9.useState)("");
+  (0, import_react9.useEffect)(() => {
     let active = true;
     api.call("projectLessons").then((value) => {
       if (active) setData(value);
@@ -1840,35 +2030,35 @@ function ProjectLessons({ api }) {
       setBusy(false);
     }
   }
-  return /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("section", { "aria-label": "\u9879\u76EE\u7ECF\u9A8C\u5BA1\u6838", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("h2", { children: "\u9879\u76EE\u7ECF\u9A8C\u5019\u9009" }),
-    /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("p", { className: "gw-small gw-muted", children: "\u6709\u6765\u6E90\u7684\u7ECF\u9A8C\u81EA\u52A8\u4F9B\u672C\u9879\u76EE\u53C2\u8003\uFF1B\u5047\u8BBE\u6682\u4E0D\u53C2\u4E0E\u68C0\u7D22\u3002\u4F60\u53EF\u4EE5\u6838\u5BF9\u3001\u66F4\u6B63\u6216\u64A4\u56DE\u3002\u4E0D\u4F1A\u81EA\u52A8\u4E0A\u4F20\u6216\u52A0\u5165\u5176\u4ED6\u9879\u76EE\u3002" }),
-    error && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("p", { role: "alert", children: error }),
-    notice && /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("p", { role: "status", children: notice }),
-    /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("details", { className: "gw-development-report", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("summary", { children: "\u4ECE\u5176\u4ED6\u9879\u76EE\u5BFC\u5165\u7ECF\u9A8C" }),
-      /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("p", { className: "gw-small", children: "\u9009\u62E9\u624B\u52A8\u5BFC\u51FA\u7684 JSON \u7ECF\u9A8C\u5305\uFF0C\u5148\u9884\u89C8\u518D\u5BFC\u5165\u3002\u76F8\u540C\u5B57\u6BB5\u5185\u5BB9\u81EA\u52A8\u53BB\u91CD\uFF1B\u6821\u9A8C\u53EA\u68C0\u67E5\u5B8C\u6574\u6027\uFF0C\u4E0D\u8BC1\u660E\u6765\u6E90\u53EF\u4FE1\u3002\u5BFC\u5165\u540E\u4ECD\u9700\u5BA1\u6838\u624D\u53EF\u68C0\u7D22\u3002" }),
-      /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("label", { children: [
+  return /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("section", { "aria-label": "\u9879\u76EE\u7ECF\u9A8C\u5BA1\u6838", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("h2", { children: "\u9879\u76EE\u7ECF\u9A8C\u5019\u9009" }),
+    /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("p", { className: "gw-small gw-muted", children: "\u6709\u6765\u6E90\u7684\u7ECF\u9A8C\u81EA\u52A8\u4F9B\u672C\u9879\u76EE\u53C2\u8003\uFF1B\u5047\u8BBE\u6682\u4E0D\u53C2\u4E0E\u68C0\u7D22\u3002\u4F60\u53EF\u4EE5\u6838\u5BF9\u3001\u66F4\u6B63\u6216\u64A4\u56DE\u3002\u4E0D\u4F1A\u81EA\u52A8\u4E0A\u4F20\u6216\u52A0\u5165\u5176\u4ED6\u9879\u76EE\u3002" }),
+    error && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("p", { role: "alert", children: error }),
+    notice && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("p", { role: "status", children: notice }),
+    /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("details", { className: "gw-development-report", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("summary", { children: "\u4ECE\u5176\u4ED6\u9879\u76EE\u5BFC\u5165\u7ECF\u9A8C" }),
+      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("p", { className: "gw-small", children: "\u9009\u62E9\u624B\u52A8\u5BFC\u51FA\u7684 JSON \u7ECF\u9A8C\u5305\uFF0C\u5148\u9884\u89C8\u518D\u5BFC\u5165\u3002\u76F8\u540C\u5B57\u6BB5\u5185\u5BB9\u81EA\u52A8\u53BB\u91CD\uFF1B\u6821\u9A8C\u53EA\u68C0\u67E5\u5B8C\u6574\u6027\uFF0C\u4E0D\u8BC1\u660E\u6765\u6E90\u53EF\u4FE1\u3002\u5BFC\u5165\u540E\u4ECD\u9700\u5BA1\u6838\u624D\u53EF\u68C0\u7D22\u3002" }),
+      /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("label", { children: [
         "\u9009\u62E9\u7ECF\u9A8C\u5305",
-        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("input", { type: "file", accept: ".json,application/json", disabled: busy2, onChange: readPackage })
+        /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("input", { type: "file", accept: ".json,application/json", disabled: busy2, onChange: readPackage })
       ] }),
-      incoming && /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("div", { children: [
-        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("h3", { children: incoming.preview.lesson.title }),
-        Object.entries(incoming.preview.lesson).filter(([key4]) => key4 !== "title").map(([key4, value]) => /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("p", { children: [
-          /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("strong", { children: [
+      incoming && /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("h3", { children: incoming.preview.lesson.title }),
+        Object.entries(incoming.preview.lesson).filter(([key4]) => key4 !== "title").map(([key4, value]) => /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("p", { children: [
+          /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("strong", { children: [
             { content: "\u7ECF\u9A8C", category: "\u5206\u7C7B", applicability: "\u9002\u7528\u6761\u4EF6", verification: "\u63D0\u4F9B\u8005\u8BB0\u5F55\u7684\u9A8C\u8BC1", limitations: "\u8FB9\u754C" }[key4],
             "\uFF1A"
           ] }),
           value
         ] }, key4)),
-        /* @__PURE__ */ (0, import_jsx_runtime6.jsxs)("label", { className: "gw-lesson-confirm", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("input", { type: "checkbox", checked: importConfirmed, onChange: (e42) => setImportConfirmed(e42.target.checked) }),
+        /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("label", { className: "gw-lesson-confirm", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("input", { type: "checkbox", checked: importConfirmed, onChange: (e42) => setImportConfirmed(e42.target.checked) }),
           "\u6211\u5DF2\u6838\u5BF9\u5185\u5BB9\uFF0C\u540C\u610F\u5BFC\u5165\u5230\u5F53\u524D\u9879\u76EE\u7684\u5F85\u5BA1\u6838\u5019\u9009\u3002"
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("button", { className: "gw-secondary", disabled: busy2 || !importConfirmed, onClick: importItem, children: "\u5BFC\u5165\u5F85\u5BA1\u6838\u5019\u9009" })
+        /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("button", { className: "gw-secondary", disabled: busy2 || !importConfirmed, onClick: importItem, children: "\u5BFC\u5165\u5F85\u5BA1\u6838\u5019\u9009" })
       ] })
     ] }),
-    !data ? /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("p", { children: "\u6B63\u5728\u8BFB\u53D6\u7ECF\u9A8C\u5019\u9009\u2026" }) : !data.candidates.length ? /* @__PURE__ */ (0, import_jsx_runtime6.jsx)("p", { children: "\u5C1A\u65E0\u6C89\u6DC0\u3002\u5F00\u53D1\u590D\u76D8\u4F1A\u81EA\u52A8\u63D0\u70BC\u53EF\u590D\u7528\u5185\u5BB9\uFF1B\u6CA1\u6709\u53EF\u9760\u4F9D\u636E\u65F6\u4E0D\u4F1A\u5F3A\u884C\u5165\u5E93\u3002" }) : data.candidates.map((item) => /* @__PURE__ */ (0, import_jsx_runtime6.jsx)(Candidate, { item, busy: busy2, onReview: review, onExport: exportItem }, `${item.key}:${item.reviewHash}`))
+    !data ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("p", { children: "\u6B63\u5728\u8BFB\u53D6\u7ECF\u9A8C\u5019\u9009\u2026" }) : !data.candidates.length ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("p", { children: "\u5C1A\u65E0\u6C89\u6DC0\u3002\u5F00\u53D1\u590D\u76D8\u4F1A\u81EA\u52A8\u63D0\u70BC\u53EF\u590D\u7528\u5185\u5BB9\uFF1B\u6CA1\u6709\u53EF\u9760\u4F9D\u636E\u65F6\u4E0D\u4F1A\u5F3A\u884C\u5165\u5E93\u3002" }) : data.candidates.map((item) => /* @__PURE__ */ (0, import_jsx_runtime7.jsx)(Candidate, { item, busy: busy2, onReview: review, onExport: exportItem }, `${item.key}:${item.reviewHash}`))
   ] });
 }
 
@@ -1947,7 +2137,7 @@ function stageGuidance(status, agentRunning = false, checking = false) {
 var import_react27 = __toESM(require("react"), 1);
 
 // src/use-suggestion-draft.js
-var import_react9 = require("react");
+var import_react10 = require("react");
 var prefix2 = "godot-workbench:suggestion-draft:";
 function storage() {
   try {
@@ -1978,13 +2168,13 @@ function read(root) {
 }
 function useSuggestionDraft(projectRoot) {
   const root = projectPathKey(projectRoot);
-  const current = (0, import_react9.useRef)(root);
+  const current = (0, import_react10.useRef)(root);
   current.current = root;
-  const [draft, setDraft] = (0, import_react9.useState)({ root: null, text: "", open: false });
-  (0, import_react9.useEffect)(() => {
+  const [draft, setDraft] = (0, import_react10.useState)({ root: null, text: "", open: false });
+  (0, import_react10.useEffect)(() => {
     setDraft({ root, ...root ? read(root) : { text: "", key: "" }, open: false });
   }, [root]);
-  (0, import_react9.useEffect)(() => {
+  (0, import_react10.useEffect)(() => {
     const cleared = (event) => {
       if (event.detail === root && !read(root).text) setDraft({ root, text: "", key: "", open: false });
     };
@@ -2047,17 +2237,17 @@ function createApi({ sendMessage } = {}) {
 }
 
 // src/ProjectResources.jsx
-var import_react11 = __toESM(require("react"), 1);
+var import_react12 = __toESM(require("react"), 1);
 
 // src/EconomySimulation.jsx
-var import_react10 = __toESM(require("react"), 1);
-var import_jsx_runtime7 = require("react/jsx-runtime");
+var import_react11 = __toESM(require("react"), 1);
+var import_jsx_runtime8 = require("react/jsx-runtime");
 function EconomySimulation({ api, disabled, onAssist }) {
-  const [strategy, setStrategy] = (0, import_react10.useState)("active");
-  const [report, setReport] = (0, import_react10.useState)(null);
-  const [busy2, setBusy] = (0, import_react10.useState)(false);
-  const [error, setError] = (0, import_react10.useState)("");
-  const [at, setAt] = (0, import_react10.useState)(null);
+  const [strategy, setStrategy] = (0, import_react11.useState)("active");
+  const [report, setReport] = (0, import_react11.useState)(null);
+  const [busy2, setBusy] = (0, import_react11.useState)(false);
+  const [error, setError] = (0, import_react11.useState)("");
+  const [at, setAt] = (0, import_react11.useState)(null);
   async function run() {
     const expectedFingerprint = report?.sourceFingerprint;
     setBusy(true);
@@ -2074,68 +2264,68 @@ function EconomySimulation({ api, disabled, onAssist }) {
       setBusy(false);
     }
   }
-  return /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("section", { className: "gw-economy", "aria-label": "\u957F\u671F\u6570\u503C\u6A21\u62DF", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("h3", { children: "\u73A9\u4E00\u5C0F\u65F6\uFF0C\u4F1A\u7B49\u591A\u4E45\uFF1F" }),
-    /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("div", { className: "gw-resource-toolbar", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("select", { "aria-label": "\u6A21\u62DF\u64CD\u4F5C\u65B9\u5F0F", value: strategy, disabled: busy2, onChange: (e42) => {
+  return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("section", { className: "gw-economy", "aria-label": "\u957F\u671F\u6570\u503C\u6A21\u62DF", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("h3", { children: "\u73A9\u4E00\u5C0F\u65F6\uFF0C\u4F1A\u7B49\u591A\u4E45\uFF1F" }),
+    /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "gw-resource-toolbar", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("select", { "aria-label": "\u6A21\u62DF\u64CD\u4F5C\u65B9\u5F0F", value: strategy, disabled: busy2, onChange: (e42) => {
         setStrategy(e42.target.value);
         setReport(null);
       }, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("option", { value: "active", children: "\u6301\u7EED\u6BCF\u79D2\u70B9\u51FB\u4E00\u6B21" }),
-        /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("option", { value: "idle", children: "\u4E70\u5230\u7B2C\u4E00\u53F0\u540E\u505C\u6B62\u70B9\u51FB" })
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("option", { value: "active", children: "\u6301\u7EED\u6BCF\u79D2\u70B9\u51FB\u4E00\u6B21" }),
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("option", { value: "idle", children: "\u4E70\u5230\u7B2C\u4E00\u53F0\u540E\u505C\u6B62\u70B9\u51FB" })
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("button", { className: "gw-secondary", disabled: busy2, onClick: run, children: busy2 ? "\u6B63\u5728\u6A21\u62DF\u2026" : "\u6A21\u62DF\u8D2D\u4E70\u8282\u594F" })
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { className: "gw-secondary", disabled: busy2, onClick: run, children: busy2 ? "\u6B63\u5728\u6A21\u62DF\u2026" : "\u6A21\u62DF\u8D2D\u4E70\u8282\u594F" })
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("p", { className: "gw-small gw-muted", children: "\u4F7F\u7528\u5DF2\u4FDD\u5B58\u6570\u503C\uFF0C\u6BCF\u79D2\u51FA\u552E\u5E76\u8D2D\u4E70\u3002\u4E0D\u4FEE\u6539\u6E38\u620F\uFF0C\u4E5F\u4E0D\u4EE3\u8868\u5B9E\u9645\u8BD5\u73A9\u3002" }),
-    error && /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("p", { role: "alert", className: "gw-settings-error", children: error }),
-    report && /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(import_jsx_runtime7.Fragment, { children: [
-      /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("p", { children: report.available ? report.conclusion : report.reason }),
-      !report.available && (onAssist ? /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("button", { className: "gw-secondary", disabled: busy2 || disabled, onClick: () => onAssist(report.reason), children: "\u8BA9 AI \u6838\u5BF9\u6A21\u62DF\u89C4\u5219" }) : report.next && /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("p", { className: "gw-small gw-muted", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("p", { className: "gw-small gw-muted", children: "\u4F7F\u7528\u5DF2\u4FDD\u5B58\u6570\u503C\uFF0C\u6BCF\u79D2\u51FA\u552E\u5E76\u8D2D\u4E70\u3002\u4E0D\u4FEE\u6539\u6E38\u620F\uFF0C\u4E5F\u4E0D\u4EE3\u8868\u5B9E\u9645\u8BD5\u73A9\u3002" }),
+    error && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("p", { role: "alert", className: "gw-settings-error", children: error }),
+    report && /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(import_jsx_runtime8.Fragment, { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("p", { children: report.available ? report.conclusion : report.reason }),
+      !report.available && (onAssist ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { className: "gw-secondary", disabled: busy2 || disabled, onClick: () => onAssist(report.reason), children: "\u8BA9 AI \u6838\u5BF9\u6A21\u62DF\u89C4\u5219" }) : report.next && /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("p", { className: "gw-small gw-muted", children: [
         "\u4E0B\u4E00\u6B65\uFF1A",
         report.next
       ] })),
-      report.available && /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)(import_jsx_runtime7.Fragment, { children: [
-        /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("p", { className: "gw-small gw-muted", children: [
+      report.available && /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(import_jsx_runtime8.Fragment, { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("p", { className: "gw-small gw-muted", children: [
           at,
           " \u8BFB\u53D6\u7684\u89C4\u5219\u7ED3\u679C\uFF1B\u5DE5\u7A0B\u4FEE\u6539\u540E\u8BF7\u91CD\u65B0\u6A21\u62DF\u3002",
           report.previousSourceChanged && "\u6765\u6E90\u4E0E\u4E0A\u6B21\u4E0D\u540C\uFF0C\u5DF2\u91CD\u65B0\u8BA1\u7B97\u3002"
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("details", { children: [
-          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("summary", { children: "\u67E5\u770B\u8282\u594F\u66F2\u7EBF\u4E0E\u4F9D\u636E" }),
-          /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("svg", { viewBox: "0 0 600 180", role: "img", "aria-label": "\u4E00\u5C0F\u65F6\u5185\u77FF\u673A\u6570\u91CF\u53D8\u5316\uFF0C\u6A2A\u8F74\u4E3A\u65F6\u95F4\uFF0C\u7EB5\u8F74\u4E3A\u77FF\u673A\u6570\u91CF", style: { width: "100%", maxHeight: 180 }, children: [
-            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("path", { d: "M30 10 V150 H590", fill: "none", stroke: "currentColor" }),
-            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("polyline", { fill: "none", stroke: "#d0eb47", strokeWidth: "2", points: report.curve.map((p4) => `${30 + p4.second / 3600 * 550},${150 - p4.miners / 20 * 130}`).join(" ") }),
-            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("text", { x: "4", y: "20", fill: "currentColor", fontSize: "12", children: "20\u53F0" }),
-            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("text", { x: "25", y: "170", fill: "currentColor", fontSize: "12", children: "0\u5206" }),
-            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("text", { x: "540", y: "170", fill: "currentColor", fontSize: "12", children: "60\u5206" })
+        /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("details", { children: [
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("summary", { children: "\u67E5\u770B\u8282\u594F\u66F2\u7EBF\u4E0E\u4F9D\u636E" }),
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("svg", { viewBox: "0 0 600 180", role: "img", "aria-label": "\u4E00\u5C0F\u65F6\u5185\u77FF\u673A\u6570\u91CF\u53D8\u5316\uFF0C\u6A2A\u8F74\u4E3A\u65F6\u95F4\uFF0C\u7EB5\u8F74\u4E3A\u77FF\u673A\u6570\u91CF", style: { width: "100%", maxHeight: 180 }, children: [
+            /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("path", { d: "M30 10 V150 H590", fill: "none", stroke: "currentColor" }),
+            /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("polyline", { fill: "none", stroke: "#d0eb47", strokeWidth: "2", points: report.curve.map((p4) => `${30 + p4.second / 3600 * 550},${150 - p4.miners / 20 * 130}`).join(" ") }),
+            /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("text", { x: "4", y: "20", fill: "currentColor", fontSize: "12", children: "20\u53F0" }),
+            /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("text", { x: "25", y: "170", fill: "currentColor", fontSize: "12", children: "0\u5206" }),
+            /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("text", { x: "540", y: "170", fill: "currentColor", fontSize: "12", children: "60\u5206" })
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("div", { className: "gw-resource-table", children: /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("table", { children: [
-            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("thead", { children: /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("tr", { children: [
-              /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("th", { children: "\u77FF\u673A" }),
-              /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("th", { children: "\u8D2D\u5165\u65F6\u523B" }),
-              /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("th", { children: "\u8DDD\u4E0A\u6B21\u8D2D\u4E70" })
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "gw-resource-table", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("table", { children: [
+            /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("thead", { children: /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("tr", { children: [
+              /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("th", { children: "\u77FF\u673A" }),
+              /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("th", { children: "\u8D2D\u5165\u65F6\u523B" }),
+              /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("th", { children: "\u8DDD\u4E0A\u6B21\u8D2D\u4E70" })
             ] }) }),
-            /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("tbody", { children: report.purchases.map((p4) => /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("tr", { children: [
-              /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("td", { children: [
+            /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("tbody", { children: report.purchases.map((p4) => /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("tr", { children: [
+              /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("td", { children: [
                 "\u7B2C",
                 p4.level,
                 "\u53F0"
               ] }),
-              /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("td", { children: [
+              /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("td", { children: [
                 Math.floor(p4.second / 60),
                 "\u5206",
                 p4.second % 60,
                 "\u79D2"
               ] }),
-              /* @__PURE__ */ (0, import_jsx_runtime7.jsxs)("td", { children: [
+              /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("td", { children: [
                 p4.waitSeconds,
                 "\u79D2"
               ] })
             ] }, p4.level)) })
           ] }) }),
-          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("p", { className: "gw-small gw-muted", children: report.scope }),
-          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("p", { className: "gw-small gw-muted", children: report.boundary }),
-          /* @__PURE__ */ (0, import_jsx_runtime7.jsx)("p", { className: "gw-small gw-muted", children: report.curveSampling.note })
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("p", { className: "gw-small gw-muted", children: report.scope }),
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("p", { className: "gw-small gw-muted", children: report.boundary }),
+          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("p", { className: "gw-small gw-muted", children: report.curveSampling.note })
         ] })
       ] })
     ] })
@@ -2143,56 +2333,56 @@ function EconomySimulation({ api, disabled, onAssist }) {
 }
 
 // src/ProjectResources.jsx
-var import_jsx_runtime8 = require("react/jsx-runtime");
+var import_jsx_runtime9 = require("react/jsx-runtime");
 var format = (value) => value === null || value === void 0 ? "\u2014" : typeof value === "boolean" ? value ? "\u5F00\u542F" : "\u5173\u95ED" : new Intl.NumberFormat("zh-CN", { maximumFractionDigits: 2 }).format(value);
 var size = (bytes) => bytes < 1024 ? `${bytes} B` : bytes < 1024 * 1024 ? `${format(bytes / 1024)} KiB` : `${format(bytes / 1024 / 1024)} MiB`;
 var statusNames = { draft: "\u8349\u7A3F", implemented: "\u5DF2\u767B\u8BB0\u5B9E\u88C5", unknown: "\u5F85\u6838\u5B9E" };
 function Economy({ report, title }) {
   if (!report) return null;
-  return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("section", { className: "gw-economy", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("h3", { children: title }),
-    !report.available ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("p", { children: report.reason }) : /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(import_jsx_runtime8.Fragment, { children: [
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("p", { children: [
+  return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("section", { className: "gw-economy", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("h3", { children: title }),
+    !report.available ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("p", { children: report.reason }) : /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(import_jsx_runtime9.Fragment, { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("p", { children: [
         "\u7B2C\u4E00\u53F0\u77FF\u673A\u7406\u8BBA\u4E0A\u9700\u8981 ",
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("strong", { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("strong", { children: [
           format(report.firstUpgradeClicks),
           " \u6B21\u91C7\u77FF"
         ] }),
         "\u3002"
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "gw-resource-table", children: /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("table", { children: [
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("thead", { children: /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("tr", { children: [
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("th", { children: "\u7B2C\u51E0\u53F0" }),
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("th", { children: "\u4EF7\u683C / \u91D1\u5E01" }),
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("th", { children: "\u65B0\u589E\u6536\u76CA / \u79D2" }),
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("th", { children: "\u56DE\u672C / \u79D2" })
+      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "gw-resource-table", children: /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("table", { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("thead", { children: /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("tr", { children: [
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("th", { children: "\u7B2C\u51E0\u53F0" }),
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("th", { children: "\u4EF7\u683C / \u91D1\u5E01" }),
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("th", { children: "\u65B0\u589E\u6536\u76CA / \u79D2" }),
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("th", { children: "\u56DE\u672C / \u79D2" })
         ] }) }),
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("tbody", { children: report.levels.map((level) => /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("tr", { children: [
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("td", { children: level.level }),
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("td", { children: format(level.cost) }),
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("td", { children: format(level.addedCoinsPerSecond) }),
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("td", { children: format(level.paybackSeconds) })
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("tbody", { children: report.levels.map((level) => /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("tr", { children: [
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("td", { children: level.level }),
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("td", { children: format(level.cost) }),
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("td", { children: format(level.addedCoinsPerSecond) }),
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("td", { children: format(level.paybackSeconds) })
         ] }, level.level)) })
       ] }) }),
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("details", { children: [
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("summary", { children: "\u8BA1\u7B97\u5047\u8BBE\u4E0E\u516C\u5F0F" }),
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("p", { children: report.formula }),
-        report.assumptions.map((value) => /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("p", { className: "gw-small gw-muted", children: value }, value))
+      /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("details", { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("summary", { children: "\u8BA1\u7B97\u5047\u8BBE\u4E0E\u516C\u5F0F" }),
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("p", { children: report.formula }),
+        report.assumptions.map((value) => /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("p", { className: "gw-small gw-muted", children: value }, value))
       ] })
     ] })
   ] });
 }
 function ProjectResources({ api, mode, approved, blocked, onSaved, onSetup, onSimulationSetup }) {
-  const [view, setView] = (0, import_react11.useState)(null);
-  const [values, setValues] = (0, import_react11.useState)({});
-  const [preview, setPreview] = (0, import_react11.useState)(null);
-  const [statement, setStatement] = (0, import_react11.useState)("");
-  const [busy2, setBusy] = (0, import_react11.useState)("");
-  const [error, setError] = (0, import_react11.useState)("");
-  const [notice, setNotice] = (0, import_react11.useState)("");
-  const [asset, setAsset] = (0, import_react11.useState)(null);
-  const [assetPreview, setAssetPreview] = (0, import_react11.useState)(null);
-  const fileRead = (0, import_react11.useRef)(0);
+  const [view, setView] = (0, import_react12.useState)(null);
+  const [values, setValues] = (0, import_react12.useState)({});
+  const [preview, setPreview] = (0, import_react12.useState)(null);
+  const [statement, setStatement] = (0, import_react12.useState)("");
+  const [busy2, setBusy] = (0, import_react12.useState)("");
+  const [error, setError] = (0, import_react12.useState)("");
+  const [notice, setNotice] = (0, import_react12.useState)("");
+  const [asset, setAsset] = (0, import_react12.useState)(null);
+  const [assetPreview, setAssetPreview] = (0, import_react12.useState)(null);
+  const fileRead = (0, import_react12.useRef)(0);
   function receive(next) {
     setView(next);
     setValues(Object.fromEntries(next.parameters.fields.map((field) => [field.key, field.type === "boolean" ? field.value : String(field.value ?? "")])));
@@ -2201,7 +2391,7 @@ function ProjectResources({ api, mode, approved, blocked, onSaved, onSetup, onSi
   async function load() {
     receive(await api.call("resources"));
   }
-  (0, import_react11.useEffect)(() => {
+  (0, import_react12.useEffect)(() => {
     const abort = new AbortController();
     api.call("resources", {}, abort.signal).then(receive).catch((e42) => {
       if (!abort.signal.aborted) setError(e42.message);
@@ -2274,42 +2464,42 @@ function ProjectResources({ api, mode, approved, blocked, onSaved, onSetup, onSi
       await onSaved(result);
     });
   }
-  return /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("section", { className: "gw-project-resources", "aria-label": mode === "parameters" ? "\u6E38\u620F\u53C2\u6570" : "\u7D20\u6750\u4E0E\u8D44\u6E90", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "gw-resource-toolbar", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("p", { className: "gw-muted", children: mode === "parameters" ? "\u76F4\u63A5\u8BFB\u53D6\u6E38\u620F\u4F7F\u7528\u7684\u8D44\u6E90\u3002\u5148\u6BD4\u8F83\u5F71\u54CD\uFF0C\u518D\u4FDD\u5B58\u548C\u68C0\u67E5\u3002" : "\u67E5\u770B\u6765\u6E90\u3001\u5927\u5C0F\u548C\u5DF2\u77E5\u5F15\u7528\uFF0C\u5BFC\u5165\u6216\u66FF\u6362\u65F6\u4FDD\u7559\u65E7\u7248\u672C\u3002" }),
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { className: "gw-secondary", disabled: Boolean(busy2), onClick: () => perform("\u6B63\u5728\u8BFB\u53D6\u8D44\u6E90", load), children: "\u5237\u65B0\u8D44\u6E90" })
+  return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("section", { className: "gw-project-resources", "aria-label": mode === "parameters" ? "\u6E38\u620F\u53C2\u6570" : "\u7D20\u6750\u4E0E\u8D44\u6E90", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "gw-resource-toolbar", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("p", { className: "gw-muted", children: mode === "parameters" ? "\u76F4\u63A5\u8BFB\u53D6\u6E38\u620F\u4F7F\u7528\u7684\u8D44\u6E90\u3002\u5148\u6BD4\u8F83\u5F71\u54CD\uFF0C\u518D\u4FDD\u5B58\u548C\u68C0\u67E5\u3002" : "\u67E5\u770B\u6765\u6E90\u3001\u5927\u5C0F\u548C\u5DF2\u77E5\u5F15\u7528\uFF0C\u5BFC\u5165\u6216\u66FF\u6362\u65F6\u4FDD\u7559\u65E7\u7248\u672C\u3002" }),
+      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("button", { className: "gw-secondary", disabled: Boolean(busy2), onClick: () => perform("\u6B63\u5728\u8BFB\u53D6\u8D44\u6E90", load), children: "\u5237\u65B0\u8D44\u6E90" })
     ] }),
-    error && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("p", { role: "alert", className: "gw-settings-error", children: error }),
-    (notice || busy2) && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("p", { role: "status", children: busy2 || notice }),
-    (!approved || blocked) && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("p", { className: "gw-muted", children: blocked || "\u5148\u786E\u8BA4\u5F53\u524D\u6E38\u620F\u65B9\u6848\uFF0C\u518D\u4FDD\u5B58\u53C2\u6570\u6216\u7D20\u6750\u3002\u73B0\u5728\u53EF\u4EE5\u67E5\u770B\u4E0E\u9884\u89C8\u3002" }),
-    !view ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("p", { children: "\u6B63\u5728\u8BFB\u53D6\u9879\u76EE\u8D44\u6E90\u2026" }) : mode === "parameters" ? /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(import_jsx_runtime8.Fragment, { children: [
-      !view.parameters.available ? /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "gw-empty", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("h3", { children: "\u8FD8\u6CA1\u6709\u6574\u7406\u53EF\u8C03\u53C2\u6570" }),
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("p", { children: "\u8BA9 Agent \u5148\u9605\u8BFB\u6E38\u620F\u5B9E\u73B0\uFF0C\u63D0\u51FA\u53EF\u8C03\u53C2\u6570\u548C\u5F71\u54CD\uFF0C\u518D\u63A5\u5165\u73B0\u6709\u8D44\u6E90\u3002" }),
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { className: "gw-secondary", disabled: Boolean(busy2 || blocked), onClick: onSetup, children: "\u8BA9 Agent \u6574\u7406\u53C2\u6570\u65B9\u6848" })
-      ] }) : /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(import_jsx_runtime8.Fragment, { children: [
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("p", { className: "gw-small gw-path", children: [
+    error && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("p", { role: "alert", className: "gw-settings-error", children: error }),
+    (notice || busy2) && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("p", { role: "status", children: busy2 || notice }),
+    (!approved || blocked) && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("p", { className: "gw-muted", children: blocked || "\u5148\u786E\u8BA4\u5F53\u524D\u6E38\u620F\u65B9\u6848\uFF0C\u518D\u4FDD\u5B58\u53C2\u6570\u6216\u7D20\u6750\u3002\u73B0\u5728\u53EF\u4EE5\u67E5\u770B\u4E0E\u9884\u89C8\u3002" }),
+    !view ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("p", { children: "\u6B63\u5728\u8BFB\u53D6\u9879\u76EE\u8D44\u6E90\u2026" }) : mode === "parameters" ? /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(import_jsx_runtime9.Fragment, { children: [
+      !view.parameters.available ? /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "gw-empty", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("h3", { children: "\u8FD8\u6CA1\u6709\u6574\u7406\u53EF\u8C03\u53C2\u6570" }),
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("p", { children: "\u8BA9 Agent \u5148\u9605\u8BFB\u6E38\u620F\u5B9E\u73B0\uFF0C\u63D0\u51FA\u53EF\u8C03\u53C2\u6570\u548C\u5F71\u54CD\uFF0C\u518D\u63A5\u5165\u73B0\u6709\u8D44\u6E90\u3002" }),
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("button", { className: "gw-secondary", disabled: Boolean(busy2 || blocked), onClick: onSetup, children: "\u8BA9 Agent \u6574\u7406\u53C2\u6570\u65B9\u6848" })
+      ] }) : /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(import_jsx_runtime9.Fragment, { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("p", { className: "gw-small gw-path", children: [
           "\u9879\u76EE\u767B\u8BB0\u7684\u53C2\u6570\u6765\u6E90\uFF1A",
           view.parameters.path
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("div", { className: "gw-parameter-fields", children: view.parameters.fields.map((field) => /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("label", { className: "gw-parameter-field", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("strong", { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "gw-parameter-fields", children: view.parameters.fields.map((field) => /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("label", { className: "gw-parameter-field", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("strong", { children: [
             field.label,
-            /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("span", { children: field.unit })
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { children: field.unit })
           ] }),
-          field.type === "boolean" ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("input", { "aria-label": field.label, type: "checkbox", checked: Boolean(values[field.key]), onChange: (e42) => {
+          field.type === "boolean" ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("input", { "aria-label": field.label, type: "checkbox", checked: Boolean(values[field.key]), onChange: (e42) => {
             setValues({ ...values, [field.key]: e42.target.checked });
             setPreview(null);
-          } }) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("input", { "aria-label": field.label, type: "number", min: field.min, max: field.max, step: field.type === "integer" ? 1 : "any", value: values[field.key] ?? "", onChange: (e42) => {
+          } }) : /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("input", { "aria-label": field.label, type: "number", min: field.min, max: field.max, step: field.type === "integer" ? 1 : "any", value: values[field.key] ?? "", onChange: (e42) => {
             setValues({ ...values, [field.key]: e42.target.value });
             setPreview(null);
           } }),
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("span", { className: "gw-small gw-muted", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("span", { className: "gw-small gw-muted", children: [
             field.effect,
             " ",
             field.type !== "boolean" && `\u8303\u56F4 ${field.min}\u2013${field.max}\u3002`
           ] }),
-          field.error && /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("span", { className: "gw-settings-error", children: [
+          field.error && /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("span", { className: "gw-settings-error", children: [
             "\u5F53\u524D\u6E90\u503C\uFF1A",
             field.error,
             "\uFF08\u7B2C ",
@@ -2317,12 +2507,12 @@ function ProjectResources({ api, mode, approved, blocked, onSaved, onSetup, onSi
             " \u884C\uFF09"
           ] })
         ] }, field.key)) }),
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { className: "gw-secondary", disabled: Boolean(busy2), onClick: previewParameters, children: "\u9884\u89C8\u8C03\u53C2\u5F71\u54CD" }),
-        preview && /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("section", { className: "gw-resource-preview", "aria-label": "\u53C2\u6570\u4FEE\u6539\u9884\u89C8", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("h3", { children: "\u5373\u5C06\u4FDD\u5B58\u7684\u4FEE\u6539" }),
-          !preview.changes.length ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("p", { children: "\u6570\u503C\u6CA1\u6709\u53D8\u5316\u3002" }) : /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(import_jsx_runtime8.Fragment, { children: [
-            preview.changes.map((change) => /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("p", { children: [
-              /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("strong", { children: change.label }),
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("button", { className: "gw-secondary", disabled: Boolean(busy2), onClick: previewParameters, children: "\u9884\u89C8\u8C03\u53C2\u5F71\u54CD" }),
+        preview && /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("section", { className: "gw-resource-preview", "aria-label": "\u53C2\u6570\u4FEE\u6539\u9884\u89C8", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("h3", { children: "\u5373\u5C06\u4FDD\u5B58\u7684\u4FEE\u6539" }),
+          !preview.changes.length ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("p", { children: "\u6570\u503C\u6CA1\u6709\u53D8\u5316\u3002" }) : /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(import_jsx_runtime9.Fragment, { children: [
+            preview.changes.map((change) => /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("p", { children: [
+              /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("strong", { children: change.label }),
               "\uFF1A",
               format(change.before),
               " \u2192 ",
@@ -2330,114 +2520,114 @@ function ProjectResources({ api, mode, approved, blocked, onSaved, onSetup, onSi
               " ",
               change.unit
             ] }, change.key)),
-            /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("label", { children: [
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("label", { children: [
               "\u8C03\u6574\u539F\u56E0",
-              /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("input", { "aria-label": "\u53C2\u6570\u8C03\u6574\u539F\u56E0", maxLength: 2e3, value: statement, onChange: (e42) => setStatement(e42.target.value), placeholder: "\u4F8B\u5982\uFF1A\u7F29\u77ED\u5F00\u5C40\u91CD\u590D\u70B9\u51FB\u65F6\u95F4" })
+              /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("input", { "aria-label": "\u53C2\u6570\u8C03\u6574\u539F\u56E0", maxLength: 2e3, value: statement, onChange: (e42) => setStatement(e42.target.value), placeholder: "\u4F8B\u5982\uFF1A\u7F29\u77ED\u5F00\u5C40\u91CD\u590D\u70B9\u51FB\u65F6\u95F4" })
             ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { className: "gw-primary", disabled: disabled || !statement.trim(), onClick: saveParameters, children: "\u4FDD\u5B58\u53C2\u6570\u5E76\u68C0\u67E5" })
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("button", { className: "gw-primary", disabled: disabled || !statement.trim(), onClick: saveParameters, children: "\u4FDD\u5B58\u53C2\u6570\u5E76\u68C0\u67E5" })
           ] })
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "gw-economy-comparison", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(EconomySimulation, { api, disabled: Boolean(busy2 || blocked), onAssist: onSimulationSetup }, view.token),
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Economy, { report: view.economy, title: "\u5F53\u524D\u6570\u503C\u7684\u7406\u8BBA\u7ED3\u679C" }),
-          preview?.changes.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)(Economy, { report: preview.proposedEconomy, title: "\u8C03\u6574\u540E\u7684\u7406\u8BBA\u7ED3\u679C" })
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "gw-economy-comparison", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(EconomySimulation, { api, disabled: Boolean(busy2 || blocked), onAssist: onSimulationSetup }, view.token),
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Economy, { report: view.economy, title: "\u5F53\u524D\u6570\u503C\u7684\u7406\u8BBA\u7ED3\u679C" }),
+          preview?.changes.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)(Economy, { report: preview.proposedEconomy, title: "\u8C03\u6574\u540E\u7684\u7406\u8BBA\u7ED3\u679C" })
         ] })
       ] }),
-      view.issues.filter((issue) => issue.code !== "RESOURCE_REFERENCE_MISSING").map((issue, i) => /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("p", { role: "alert", className: "gw-settings-error", children: [
+      view.issues.filter((issue) => issue.code !== "RESOURCE_REFERENCE_MISSING").map((issue, i) => /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("p", { role: "alert", className: "gw-settings-error", children: [
         issue.path,
         ":",
         issue.line,
         " \xB7 ",
         issue.message
       ] }, i))
-    ] }) : /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)(import_jsx_runtime8.Fragment, { children: [
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { className: "gw-secondary", disabled, onClick: () => {
+    ] }) : /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(import_jsx_runtime9.Fragment, { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("button", { className: "gw-secondary", disabled, onClick: () => {
         setAsset({ path: "", source: "", status: "draft" });
         setAssetPreview(null);
         setStatement("");
       }, children: "\u5BFC\u5165\u7D20\u6750" }),
-      asset && /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("section", { className: "gw-resource-preview", "aria-label": "\u7D20\u6750\u4FDD\u5B58\u9884\u89C8", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("h3", { children: asset.replace ? "\u66FF\u6362\u7D20\u6750" : "\u5BFC\u5165\u7D20\u6750" }),
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("label", { children: [
+      asset && /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("section", { className: "gw-resource-preview", "aria-label": "\u7D20\u6750\u4FDD\u5B58\u9884\u89C8", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("h3", { children: asset.replace ? "\u66FF\u6362\u7D20\u6750" : "\u5BFC\u5165\u7D20\u6750" }),
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("label", { children: [
           "\u9009\u62E9\u6587\u4EF6",
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("input", { "aria-label": "\u9009\u62E9\u7D20\u6750\u6587\u4EF6", type: "file", accept: ".png,.jpg,.jpeg,.webp,.ogg,.wav,.ttf,.otf,.glb", disabled: Boolean(busy2), onChange: (e42) => readFile(e42.target.files[0]).catch((error2) => setError(error2.message)) })
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("input", { "aria-label": "\u9009\u62E9\u7D20\u6750\u6587\u4EF6", type: "file", accept: ".png,.jpg,.jpeg,.webp,.ogg,.wav,.ttf,.otf,.glb", disabled: Boolean(busy2), onChange: (e42) => readFile(e42.target.files[0]).catch((error2) => setError(error2.message)) })
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("label", { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("label", { children: [
           "\u9879\u76EE\u5185\u8DEF\u5F84",
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("input", { "aria-label": "\u7D20\u6750\u76EE\u6807\u8DEF\u5F84", value: asset.path, readOnly: asset.replace, onChange: (e42) => {
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("input", { "aria-label": "\u7D20\u6750\u76EE\u6807\u8DEF\u5F84", value: asset.path, readOnly: asset.replace, onChange: (e42) => {
             setAsset({ ...asset, path: e42.target.value });
             setAssetPreview(null);
           } })
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("label", { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("label", { children: [
           "\u6765\u6E90\u4E0E\u6388\u6743\u8BF4\u660E",
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("input", { "aria-label": "\u7D20\u6750\u6765\u6E90", maxLength: 2e3, value: asset.source, onChange: (e42) => setAsset({ ...asset, source: e42.target.value }), placeholder: "\u7559\u7A7A\u5C06\u767B\u8BB0\u4E3A\u6765\u6E90\u5F85\u6838\u5B9E" })
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("input", { "aria-label": "\u7D20\u6750\u6765\u6E90", maxLength: 2e3, value: asset.source, onChange: (e42) => setAsset({ ...asset, source: e42.target.value }), placeholder: "\u7559\u7A7A\u5C06\u767B\u8BB0\u4E3A\u6765\u6E90\u5F85\u6838\u5B9E" })
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("label", { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("label", { children: [
           "\u4F7F\u7528\u72B6\u6001",
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("select", { "aria-label": "\u7D20\u6750\u4F7F\u7528\u72B6\u6001", value: asset.status, onChange: (e42) => setAsset({ ...asset, status: e42.target.value }), children: [
-            /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("option", { value: "draft", children: "\u8349\u7A3F" }),
-            /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("option", { value: "implemented", children: "\u767B\u8BB0\u4E3A\u5DF2\u5B9E\u88C5" }),
-            /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("option", { value: "unknown", children: "\u5F85\u6838\u5B9E" })
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("select", { "aria-label": "\u7D20\u6750\u4F7F\u7528\u72B6\u6001", value: asset.status, onChange: (e42) => setAsset({ ...asset, status: e42.target.value }), children: [
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("option", { value: "draft", children: "\u8349\u7A3F" }),
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("option", { value: "implemented", children: "\u767B\u8BB0\u4E3A\u5DF2\u5B9E\u88C5" }),
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("option", { value: "unknown", children: "\u5F85\u6838\u5B9E" })
           ] })
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("label", { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("label", { children: [
           "\u672C\u6B21\u539F\u56E0",
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("input", { "aria-label": "\u7D20\u6750\u8C03\u6574\u539F\u56E0", maxLength: 2e3, value: statement, onChange: (e42) => setStatement(e42.target.value) })
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("input", { "aria-label": "\u7D20\u6750\u8C03\u6574\u539F\u56E0", maxLength: 2e3, value: statement, onChange: (e42) => setStatement(e42.target.value) })
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("p", { className: "gw-small gw-muted", children: "PNG\u3001JPEG\u3001WebP\u3001OGG\u3001WAV\u3001TTF\u3001OTF\u3001GLB\uFF1B\u5355\u6587\u4EF6\u81F3\u591A 16 MiB\u3002\u5BFC\u5165\u4E0D\u7B49\u4E8E\u5DF2\u7ECF\u653E\u5165\u573A\u666F\uFF0C\u89C6\u89C9\u6548\u679C\u9700\u8981\u53E6\u884C\u68C0\u67E5\u3002" }),
-        assetPreview && /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("p", { children: [
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("strong", { children: assetPreview.exists ? "\u66FF\u6362\u5DF2\u6709\u6587\u4EF6" : "\u65B0\u589E\u6587\u4EF6" }),
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("p", { className: "gw-small gw-muted", children: "PNG\u3001JPEG\u3001WebP\u3001OGG\u3001WAV\u3001TTF\u3001OTF\u3001GLB\uFF1B\u5355\u6587\u4EF6\u81F3\u591A 16 MiB\u3002\u5BFC\u5165\u4E0D\u7B49\u4E8E\u5DF2\u7ECF\u653E\u5165\u573A\u666F\uFF0C\u89C6\u89C9\u6548\u679C\u9700\u8981\u53E6\u884C\u68C0\u67E5\u3002" }),
+        assetPreview && /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("p", { children: [
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("strong", { children: assetPreview.exists ? "\u66FF\u6362\u5DF2\u6709\u6587\u4EF6" : "\u65B0\u589E\u6587\u4EF6" }),
           "\uFF1A",
           asset.path,
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("br", {}),
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("br", {}),
           size(assetPreview.bytes),
           " \u2192 ",
           size(asset.bytes)
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "gw-resource-toolbar", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { className: "gw-secondary", disabled: Boolean(busy2), onClick: () => {
+        /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "gw-resource-toolbar", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("button", { className: "gw-secondary", disabled: Boolean(busy2), onClick: () => {
             setAsset(null);
             setAssetPreview(null);
           }, children: "\u53D6\u6D88" }),
-          assetPreview ? /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { className: "gw-primary", disabled: disabled || !statement.trim(), onClick: saveAsset, children: assetPreview.exists ? "\u786E\u8BA4\u66FF\u6362\u5E76\u68C0\u67E5" : "\u786E\u8BA4\u5BFC\u5165\u5E76\u68C0\u67E5" }) : /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { className: "gw-secondary", disabled: disabled || !asset.content || !asset.path, onClick: previewAsset, children: "\u9884\u89C8\u7D20\u6750\u4FEE\u6539" })
+          assetPreview ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("button", { className: "gw-primary", disabled: disabled || !statement.trim(), onClick: saveAsset, children: assetPreview.exists ? "\u786E\u8BA4\u66FF\u6362\u5E76\u68C0\u67E5" : "\u786E\u8BA4\u5BFC\u5165\u5E76\u68C0\u67E5" }) : /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("button", { className: "gw-secondary", disabled: disabled || !asset.content || !asset.path, onClick: previewAsset, children: "\u9884\u89C8\u7D20\u6750\u4FEE\u6539" })
         ] })
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("p", { className: "gw-small gw-muted", children: view.inventory.note }),
-      !view.inventory.complete && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("p", { role: "alert", children: "\u672C\u6B21\u626B\u63CF\u4E0D\u5B8C\u6574\uFF0C\u90E8\u5206\u6587\u4EF6\u53EF\u80FD\u672A\u5217\u51FA\u3002" }),
-      /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "gw-asset-list", children: [
-        view.inventory.assets.map((item) => /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("article", { children: [
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("div", { className: "gw-resource-toolbar", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("strong", { className: "gw-path", children: item.path }),
-            /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("span", { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("p", { className: "gw-small gw-muted", children: view.inventory.note }),
+      !view.inventory.complete && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("p", { role: "alert", children: "\u672C\u6B21\u626B\u63CF\u4E0D\u5B8C\u6574\uFF0C\u90E8\u5206\u6587\u4EF6\u53EF\u80FD\u672A\u5217\u51FA\u3002" }),
+      /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "gw-asset-list", children: [
+        view.inventory.assets.map((item) => /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("article", { children: [
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "gw-resource-toolbar", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("strong", { className: "gw-path", children: item.path }),
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("span", { children: [
               item.type.toUpperCase(),
               " \xB7 ",
               size(item.bytes)
             ] })
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("p", { className: "gw-small", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("p", { className: "gw-small", children: [
             statusNames[item.status],
             " \xB7 \u6765\u6E90\uFF1A",
             item.source
           ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("details", { children: [
-            /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("summary", { children: item.references.length ? `${item.references.length} \u5904\u5DF2\u77E5\u5F15\u7528` : "\u5F53\u524D\u626B\u63CF\u672A\u53D1\u73B0\u5F15\u7528" }),
-            item.references.map((reference, i) => /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("p", { className: "gw-small gw-path", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("details", { children: [
+            /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("summary", { children: item.references.length ? `${item.references.length} \u5904\u5DF2\u77E5\u5F15\u7528` : "\u5F53\u524D\u626B\u63CF\u672A\u53D1\u73B0\u5F15\u7528" }),
+            item.references.map((reference, i) => /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("p", { className: "gw-small gw-path", children: [
               reference.from,
               ":",
               reference.line
             ] }, i)),
-            !item.references.length && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("p", { className: "gw-small gw-muted", children: "\u53EF\u80FD\u901A\u8FC7\u52A8\u6001\u8DEF\u5F84\u52A0\u8F7D\uFF0C\u4E0D\u80FD\u636E\u6B64\u5220\u9664\u3002" })
+            !item.references.length && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("p", { className: "gw-small gw-muted", children: "\u53EF\u80FD\u901A\u8FC7\u52A8\u6001\u8DEF\u5F84\u52A0\u8F7D\uFF0C\u4E0D\u80FD\u636E\u6B64\u5220\u9664\u3002" })
           ] }),
-          item.replaceable && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("button", { className: "gw-secondary", disabled, onClick: () => {
+          item.replaceable && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("button", { className: "gw-secondary", disabled, onClick: () => {
             setAsset({ path: item.path, source: item.source, status: item.status, replace: true });
             setAssetPreview(null);
             setStatement("");
           }, children: "\u66FF\u6362\u6B64\u7D20\u6750" })
         ] }, item.path)),
-        !view.inventory.assets.length && /* @__PURE__ */ (0, import_jsx_runtime8.jsx)("p", { children: "\u5F53\u524D\u626B\u63CF\u6CA1\u6709\u53D1\u73B0\u7D20\u6750\u6216\u8D44\u6E90\u3002" })
+        !view.inventory.assets.length && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("p", { children: "\u5F53\u524D\u626B\u63CF\u6CA1\u6709\u53D1\u73B0\u7D20\u6750\u6216\u8D44\u6E90\u3002" })
       ] }),
-      view.inventory.missingReferences.map((reference, i) => /* @__PURE__ */ (0, import_jsx_runtime8.jsxs)("p", { className: "gw-settings-error gw-path", children: [
+      view.inventory.missingReferences.map((reference, i) => /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("p", { className: "gw-settings-error gw-path", children: [
         "\u5F85\u6838\u5BF9\uFF1A",
         reference.from,
         ":",
@@ -2450,20 +2640,20 @@ function ProjectResources({ api, mode, approved, blocked, onSaved, onSetup, onSi
 }
 
 // src/TemporaryFixes.jsx
-var import_react12 = __toESM(require("react"), 1);
-var import_jsx_runtime9 = require("react/jsx-runtime");
+var import_react13 = __toESM(require("react"), 1);
+var import_jsx_runtime10 = require("react/jsx-runtime");
 var fields = [["title", "\u4E34\u65F6\u65B9\u6848\u540D\u79F0"], ["reason", "\u539F\u56E0\u4E0E\u8BC1\u636E"], ["scope", "\u9002\u7528\u8303\u56F4"], ["limitations", "\u5DF2\u77E5\u9650\u5236"], ["removalCondition", "\u79FB\u9664\u6761\u4EF6"], ["followUp", "\u540E\u7EED\u5F85\u529E"]];
 var names = { open: "\u5F85\u5904\u7406", resolved: "\u5DF2\u767B\u8BB0\u89E3\u51B3", "needs-review": "\u5B9E\u73B0\u6709\u53D8\u5316 \xB7 \u9700\u91CD\u9A8C" };
 function TemporaryFixes({ api, status, blocked, onSaved }) {
-  const [view, setView] = (0, import_react12.useState)(null);
-  const [form, setForm] = (0, import_react12.useState)(null);
-  const [busy2, setBusy] = (0, import_react12.useState)(false);
-  const [error, setError] = (0, import_react12.useState)("");
+  const [view, setView] = (0, import_react13.useState)(null);
+  const [form, setForm] = (0, import_react13.useState)(null);
+  const [busy2, setBusy] = (0, import_react13.useState)(false);
+  const [error, setError] = (0, import_react13.useState)("");
   const tasks = status.tasks.filter((task) => task.currentPlan && ["running", "awaiting-review", "accepted"].includes(task.status));
   async function load() {
     setView(await api.call("temporaryFixes"));
   }
-  (0, import_react12.useEffect)(() => {
+  (0, import_react13.useEffect)(() => {
     const abort = new AbortController();
     api.call("temporaryFixes", {}, abort.signal).then(setView).catch((e42) => {
       if (!abort.signal.aborted) setError(e42.message);
@@ -2490,14 +2680,14 @@ function TemporaryFixes({ api, status, blocked, onSaved }) {
     }
   }
   const disabled = busy2 || blocked || !status.approved || !tasks.length;
-  return /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("section", { className: "gw-temporary-fixes", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "gw-resource-heading", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { children: [
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("h2", { children: "\u4E34\u65F6\u4FEE\u590D\u8BB0\u5F55" }),
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("p", { className: "gw-muted", children: "\u4FDD\u5B58\u773C\u524D\u7684\u53D6\u820D\uFF0C\u63D0\u9192\u4EE5\u540E\u8981\u6536\u5C3E\u7684\u5DE5\u4F5C\u3002" })
+  return /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("section", { className: "gw-temporary-fixes", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "gw-resource-heading", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("h2", { children: "\u4E34\u65F6\u4FEE\u590D\u8BB0\u5F55" }),
+        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("p", { className: "gw-muted", children: "\u4FDD\u5B58\u773C\u524D\u7684\u53D6\u820D\uFF0C\u63D0\u9192\u4EE5\u540E\u8981\u6536\u5C3E\u7684\u5DE5\u4F5C\u3002" })
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "gw-fix-actions", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("button", { className: "gw-secondary", disabled: busy2, onClick: async () => {
+      /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "gw-fix-actions", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("button", { className: "gw-secondary", disabled: busy2, onClick: async () => {
           setError("");
           try {
             await load();
@@ -2505,71 +2695,71 @@ function TemporaryFixes({ api, status, blocked, onSaved }) {
             setError(e42.message);
           }
         }, children: "\u5237\u65B0\u8BB0\u5F55" }),
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("button", { className: "gw-secondary", disabled, onClick: () => begin("add"), children: "\u767B\u8BB0\u4E34\u65F6\u65B9\u6848" })
+        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("button", { className: "gw-secondary", disabled, onClick: () => begin("add"), children: "\u767B\u8BB0\u4E34\u65F6\u65B9\u6848" })
       ] })
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("p", { className: "gw-small gw-muted", children: "\u89E3\u51B3\u8BF4\u660E\u662F\u9879\u76EE\u8BB0\u5F55\uFF0C\u4E0D\u7B49\u4E8E\u4EBA\u5DE5\u9A8C\u6536\u3002\u5173\u8054\u6587\u4EF6\u540E\u6765\u53D8\u5316\uFF0C\u4F1A\u91CD\u65B0\u63D0\u793A\u6838\u67E5\u3002" }),
-    !tasks.length && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("p", { children: "\u5148\u5F00\u59CB\u5173\u8054\u7684\u5F00\u53D1\u4EFB\u52A1\uFF0C\u4FDD\u5B58\u5B9E\u9645\u5B9E\u73B0\u540E\u518D\u767B\u8BB0\u3002\u5DF2\u6709\u8BB0\u5F55\u4ECD\u53EF\u67E5\u770B\u3002" }),
-    error && /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("p", { role: "alert", className: "gw-error", children: error }),
-    form && /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("form", { className: "gw-fix-form", onSubmit: save, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("h3", { children: form.action === "add" ? "\u767B\u8BB0\u4E34\u65F6\u65B9\u6848" : form.action === "edit" ? "\u4FEE\u6539\u65B9\u6848\u8BB0\u5F55" : form.action === "resolve" ? "\u8BB0\u5F55\u89E3\u51B3\u60C5\u51B5" : "\u91CD\u65B0\u6253\u5F00\u8BB0\u5F55" }),
-      /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("label", { children: [
+    /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("p", { className: "gw-small gw-muted", children: "\u89E3\u51B3\u8BF4\u660E\u662F\u9879\u76EE\u8BB0\u5F55\uFF0C\u4E0D\u7B49\u4E8E\u4EBA\u5DE5\u9A8C\u6536\u3002\u5173\u8054\u6587\u4EF6\u540E\u6765\u53D8\u5316\uFF0C\u4F1A\u91CD\u65B0\u63D0\u793A\u6838\u67E5\u3002" }),
+    !tasks.length && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("p", { children: "\u5148\u5F00\u59CB\u5173\u8054\u7684\u5F00\u53D1\u4EFB\u52A1\uFF0C\u4FDD\u5B58\u5B9E\u9645\u5B9E\u73B0\u540E\u518D\u767B\u8BB0\u3002\u5DF2\u6709\u8BB0\u5F55\u4ECD\u53EF\u67E5\u770B\u3002" }),
+    error && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("p", { role: "alert", className: "gw-error", children: error }),
+    form && /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("form", { className: "gw-fix-form", onSubmit: save, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("h3", { children: form.action === "add" ? "\u767B\u8BB0\u4E34\u65F6\u65B9\u6848" : form.action === "edit" ? "\u4FEE\u6539\u65B9\u6848\u8BB0\u5F55" : form.action === "resolve" ? "\u8BB0\u5F55\u89E3\u51B3\u60C5\u51B5" : "\u91CD\u65B0\u6253\u5F00\u8BB0\u5F55" }),
+      /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("label", { children: [
         "\u5173\u8054\u5F00\u53D1\u4EFB\u52A1",
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("select", { "aria-label": "\u5173\u8054\u5F00\u53D1\u4EFB\u52A1", required: true, value: form.taskId, onChange: (e42) => setForm({ ...form, taskId: e42.target.value }), children: [
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("option", { value: "", children: "\u9009\u62E9\u4EFB\u52A1" }),
-          tasks.map((t5) => /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("option", { value: t5.id, children: t5.title }, t5.id))
+        /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("select", { "aria-label": "\u5173\u8054\u5F00\u53D1\u4EFB\u52A1", required: true, value: form.taskId, onChange: (e42) => setForm({ ...form, taskId: e42.target.value }), children: [
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("option", { value: "", children: "\u9009\u62E9\u4EFB\u52A1" }),
+          tasks.map((t5) => /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("option", { value: t5.id, children: t5.title }, t5.id))
         ] })
       ] }),
-      ["add", "edit"].includes(form.action) ? /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(import_jsx_runtime9.Fragment, { children: [
-        fields.map(([key4, label]) => /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("label", { children: [
+      ["add", "edit"].includes(form.action) ? /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(import_jsx_runtime10.Fragment, { children: [
+        fields.map(([key4, label]) => /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("label", { children: [
           label,
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("textarea", { "aria-label": label, required: true, maxLength: key4 === "title" ? 160 : 2e3, rows: key4 === "title" ? 1 : 2, value: form[key4], onChange: (e42) => setForm({ ...form, [key4]: e42.target.value }) })
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("textarea", { "aria-label": label, required: true, maxLength: key4 === "title" ? 160 : 2e3, rows: key4 === "title" ? 1 : 2, value: form[key4], onChange: (e42) => setForm({ ...form, [key4]: e42.target.value }) })
         ] }, key4)),
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("label", { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("label", { children: [
           "\u5173\u8054\u5B9E\u73B0\u6587\u4EF6",
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("textarea", { "aria-label": "\u5173\u8054\u5B9E\u73B0\u6587\u4EF6", required: true, rows: 2, value: form.paths, onChange: (e42) => setForm({ ...form, paths: e42.target.value }), placeholder: "\u6BCF\u884C\u4E00\u4E2A\u9879\u76EE\u5185\u8DEF\u5F84\uFF0C\u4F8B\u5982 main.gd" })
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("textarea", { "aria-label": "\u5173\u8054\u5B9E\u73B0\u6587\u4EF6", required: true, rows: 2, value: form.paths, onChange: (e42) => setForm({ ...form, paths: e42.target.value }), placeholder: "\u6BCF\u884C\u4E00\u4E2A\u9879\u76EE\u5185\u8DEF\u5F84\uFF0C\u4F8B\u5982 main.gd" })
         ] })
-      ] }) : /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("label", { children: [
+      ] }) : /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("label", { children: [
         form.action === "resolve" ? "\u89E3\u51B3\u4E0E\u9A8C\u8BC1\u8BF4\u660E" : "\u91CD\u65B0\u6253\u5F00\u7684\u539F\u56E0",
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("textarea", { "aria-label": "\u5904\u7406\u8BF4\u660E", required: true, maxLength: 4e3, rows: 4, value: form.verification, onChange: (e42) => setForm({ ...form, verification: e42.target.value }) })
+        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("textarea", { "aria-label": "\u5904\u7406\u8BF4\u660E", required: true, maxLength: 4e3, rows: 4, value: form.verification, onChange: (e42) => setForm({ ...form, verification: e42.target.value }) })
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "gw-fix-actions", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("button", { className: "gw-primary", disabled, type: "submit", children: busy2 ? "\u6B63\u5728\u4FDD\u5B58" : "\u4FDD\u5B58\u8BB0\u5F55" }),
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("button", { className: "gw-secondary", type: "button", disabled: busy2, onClick: () => setForm(null), children: "\u53D6\u6D88" })
+      /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "gw-fix-actions", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("button", { className: "gw-primary", disabled, type: "submit", children: busy2 ? "\u6B63\u5728\u4FDD\u5B58" : "\u4FDD\u5B58\u8BB0\u5F55" }),
+        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("button", { className: "gw-secondary", type: "button", disabled: busy2, onClick: () => setForm(null), children: "\u53D6\u6D88" })
       ] })
     ] }),
-    !view ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("p", { children: "\u6B63\u5728\u8BFB\u53D6\u8BB0\u5F55\u2026" }) : !view.items.length ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("p", { className: "gw-empty", children: "\u8FD8\u6CA1\u6709\u767B\u8BB0\u4E34\u65F6\u65B9\u6848\u3002Agent \u91C7\u7528\u7ED5\u8FC7\u6216\u964D\u7EA7\u5B9E\u73B0\u65F6\uFF0C\u5E94\u5728\u8FD9\u91CC\u7559\u4E0B\u4F9D\u636E\u548C\u540E\u7EED\u5DE5\u4F5C\u3002" }) : /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { className: "gw-fix-list", children: view.items.map((item) => /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("article", { children: [
-      /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "gw-fix-title", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("h3", { children: item.title }),
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("span", { className: item.effectiveStatus === "resolved" ? "gw-muted" : "gw-accent", children: names[item.effectiveStatus] })
+    !view ? /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("p", { children: "\u6B63\u5728\u8BFB\u53D6\u8BB0\u5F55\u2026" }) : !view.items.length ? /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("p", { className: "gw-empty", children: "\u8FD8\u6CA1\u6709\u767B\u8BB0\u4E34\u65F6\u65B9\u6848\u3002Agent \u91C7\u7528\u7ED5\u8FC7\u6216\u964D\u7EA7\u5B9E\u73B0\u65F6\uFF0C\u5E94\u5728\u8FD9\u91CC\u7559\u4E0B\u4F9D\u636E\u548C\u540E\u7EED\u5DE5\u4F5C\u3002" }) : /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "gw-fix-list", children: view.items.map((item) => /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("article", { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "gw-fix-title", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("h3", { children: item.title }),
+        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { className: item.effectiveStatus === "resolved" ? "gw-muted" : "gw-accent", children: names[item.effectiveStatus] })
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("dl", { children: [
-        fields.slice(1).map(([key4, label]) => /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(import_react12.default.Fragment, { children: [
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("dt", { children: label }),
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("dd", { children: item[key4] })
+      /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("dl", { children: [
+        fields.slice(1).map(([key4, label]) => /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(import_react13.default.Fragment, { children: [
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("dt", { children: label }),
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("dd", { children: item[key4] })
         ] }, key4)),
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("dt", { children: "\u5173\u8054\u5B9E\u73B0" }),
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("dd", { children: item.paths.map((p4) => /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("div", { children: /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("code", { children: p4 }) }, p4)) }),
-        item.resolution && /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)(import_jsx_runtime9.Fragment, { children: [
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("dt", { children: "\u89E3\u51B3\u4E0E\u9A8C\u8BC1\u8BF4\u660E" }),
-          /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("dd", { children: item.resolution.verification })
+        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("dt", { children: "\u5173\u8054\u5B9E\u73B0" }),
+        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("dd", { children: item.paths.map((p4) => /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("code", { children: p4 }) }, p4)) }),
+        item.resolution && /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(import_jsx_runtime10.Fragment, { children: [
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("dt", { children: "\u89E3\u51B3\u4E0E\u9A8C\u8BC1\u8BF4\u660E" }),
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("dd", { children: item.resolution.verification })
         ] })
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime9.jsxs)("div", { className: "gw-fix-actions", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("button", { className: "gw-secondary", disabled, onClick: () => begin("edit", item), children: "\u4FEE\u6539\u8BB0\u5F55" }),
-        item.status === "resolved" ? /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("button", { className: "gw-secondary", disabled, onClick: () => begin("reopen", item), children: "\u91CD\u65B0\u6253\u5F00" }) : /* @__PURE__ */ (0, import_jsx_runtime9.jsx)("button", { className: "gw-secondary", disabled, onClick: () => begin("resolve", item), children: "\u8BB0\u5F55\u89E3\u51B3\u60C5\u51B5" })
+      /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "gw-fix-actions", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("button", { className: "gw-secondary", disabled, onClick: () => begin("edit", item), children: "\u4FEE\u6539\u8BB0\u5F55" }),
+        item.status === "resolved" ? /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("button", { className: "gw-secondary", disabled, onClick: () => begin("reopen", item), children: "\u91CD\u65B0\u6253\u5F00" }) : /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("button", { className: "gw-secondary", disabled, onClick: () => begin("resolve", item), children: "\u8BB0\u5F55\u89E3\u51B3\u60C5\u51B5" })
       ] })
     ] }, item.id)) })
   ] });
 }
 
 // src/FileRecovery.jsx
-var import_react13 = __toESM(require("react"), 1);
-var import_jsx_runtime10 = require("react/jsx-runtime");
+var import_react14 = __toESM(require("react"), 1);
+var import_jsx_runtime11 = require("react/jsx-runtime");
 function FileRecovery({ api, Modal: Modal2, blocked, onClose, onResolved }) {
-  const [view, setView] = (0, import_react13.useState)(null), [selected, setSelected] = (0, import_react13.useState)("");
-  const [choice, setChoice] = (0, import_react13.useState)("keep"), [reason, setReason] = (0, import_react13.useState)("");
-  const [confirmed, setConfirmed] = (0, import_react13.useState)(false), [busy2, setBusy] = (0, import_react13.useState)(false), [error, setError] = (0, import_react13.useState)("");
+  const [view, setView] = (0, import_react14.useState)(null), [selected, setSelected] = (0, import_react14.useState)("");
+  const [choice, setChoice] = (0, import_react14.useState)("keep"), [reason, setReason] = (0, import_react14.useState)("");
+  const [confirmed, setConfirmed] = (0, import_react14.useState)(false), [busy2, setBusy] = (0, import_react14.useState)(false), [error, setError] = (0, import_react14.useState)("");
   const item = view?.operations.find((item2) => item2.id === selected);
   async function reload(id = selected) {
     const next = await api.call("fileRecoveryInspect", { operationId: id || void 0 });
@@ -2579,7 +2769,7 @@ function FileRecovery({ api, Modal: Modal2, blocked, onClose, onResolved }) {
     setChoice("keep");
     setView(target && !next.operations.find((item2) => item2.id === target)?.detail ? await api.call("fileRecoveryInspect", { operationId: target }) : next);
   }
-  (0, import_react13.useEffect)(() => {
+  (0, import_react14.useEffect)(() => {
     reload().catch((e42) => setError(e42.message));
   }, []);
   async function resolve() {
@@ -2597,65 +2787,65 @@ function FileRecovery({ api, Modal: Modal2, blocked, onClose, onResolved }) {
       setBusy(false);
     }
   }
-  return /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(Modal2, { title: "\u6838\u67E5\u4E2D\u65AD\u6587\u4EF6", wide: true, onClose: () => {
+  return /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(Modal2, { title: "\u6838\u67E5\u4E2D\u65AD\u6587\u4EF6", wide: true, onClose: () => {
     if (!busy2) onClose();
-  }, children: /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("div", { className: "gw-file-recovery", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("p", { className: "gw-muted", children: "\u5148\u6BD4\u8F83\u7248\u672C\uFF0C\u518D\u51B3\u5B9A\u4FDD\u7559\u6216\u6062\u590D\u3002\u4E0D\u4F1A\u81EA\u52A8\u7EE7\u7EED\u4E0A\u6B21\u5199\u5165\u3002" }),
-    error && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("p", { className: "gw-settings-error", role: "alert", children: error }),
-    blocked && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("p", { className: "gw-settings-error", children: blocked }),
-    !view ? /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("p", { children: "\u6B63\u5728\u8BFB\u53D6\u4FDD\u7559\u7684\u7248\u672C\u2026" }) : !view.operations.length ? /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("p", { children: "\u4E2D\u65AD\u6587\u4EF6\u5DF2\u6838\u67E5\u5B8C\u6BD5\u3002\u8BF7\u67E5\u770B\u8BCA\u65AD\uFF0C\u518D\u5B89\u6392\u4EFB\u52A1\u91CD\u8BD5\u3002" }) : /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(import_jsx_runtime10.Fragment, { children: [
-      /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("label", { children: [
+  }, children: /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "gw-file-recovery", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("p", { className: "gw-muted", children: "\u5148\u6BD4\u8F83\u7248\u672C\uFF0C\u518D\u51B3\u5B9A\u4FDD\u7559\u6216\u6062\u590D\u3002\u4E0D\u4F1A\u81EA\u52A8\u7EE7\u7EED\u4E0A\u6B21\u5199\u5165\u3002" }),
+    error && /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("p", { className: "gw-settings-error", role: "alert", children: error }),
+    blocked && /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("p", { className: "gw-settings-error", children: blocked }),
+    !view ? /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("p", { children: "\u6B63\u5728\u8BFB\u53D6\u4FDD\u7559\u7684\u7248\u672C\u2026" }) : !view.operations.length ? /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("p", { children: "\u4E2D\u65AD\u6587\u4EF6\u5DF2\u6838\u67E5\u5B8C\u6BD5\u3002\u8BF7\u67E5\u770B\u8BCA\u65AD\uFF0C\u518D\u5B89\u6392\u4EFB\u52A1\u91CD\u8BD5\u3002" }) : /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(import_jsx_runtime11.Fragment, { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("label", { children: [
         "\u5F85\u6838\u67E5\u6587\u4EF6",
-        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("select", { "aria-label": "\u5F85\u6838\u67E5\u6587\u4EF6", value: selected, disabled: busy2, onChange: (e42) => {
+        /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("select", { "aria-label": "\u5F85\u6838\u67E5\u6587\u4EF6", value: selected, disabled: busy2, onChange: (e42) => {
           setBusy(true);
           reload(e42.target.value).catch((e43) => setError(e43.message)).finally(() => setBusy(false));
-        }, children: view.operations.map((op) => /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("option", { value: op.id, children: [
+        }, children: view.operations.map((op) => /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("option", { value: op.id, children: [
           op.path,
           " \xB7 ",
           op.conflict ? "\u5B58\u5728\u540E\u7EED\u4FEE\u6539" : "\u53EF\u6BD4\u8F83\u6062\u590D"
         ] }, op.id)) })
       ] }),
-      item?.conflict && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("p", { className: "gw-settings-error", children: "\u53D1\u73B0\u540E\u7EED\u4FEE\u6539\uFF0C\u5DF2\u4FDD\u7559\u53CC\u65B9\u7248\u672C\u3002\u8FD9\u91CC\u4EC5\u5141\u8BB8\u4FDD\u7559\u5F53\u524D\u6587\u4EF6\uFF1B\u9700\u8981\u5408\u5E76\u65F6\uFF0C\u8BF7\u5148\u6BD4\u8F83\u5185\u5BB9\u518D\u7F16\u8F91\u3002" }),
-      item?.detail && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "gw-version-columns", children: [["current", "\u5F53\u524D\u6587\u4EF6"], ["before", "\u4FEE\u6539\u524D"], ["after", "\u539F\u8BA1\u5212\u5199\u5165"], ["displaced", "\u4E2D\u65AD\u65F6\u4FDD\u7559\u7684\u539F\u4EF6"]].map(([key4, title]) => /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("article", { children: [
-        /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("h4", { children: [
+      item?.conflict && /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("p", { className: "gw-settings-error", children: "\u53D1\u73B0\u540E\u7EED\u4FEE\u6539\uFF0C\u5DF2\u4FDD\u7559\u53CC\u65B9\u7248\u672C\u3002\u8FD9\u91CC\u4EC5\u5141\u8BB8\u4FDD\u7559\u5F53\u524D\u6587\u4EF6\uFF1B\u9700\u8981\u5408\u5E76\u65F6\uFF0C\u8BF7\u5148\u6BD4\u8F83\u5185\u5BB9\u518D\u7F16\u8F91\u3002" }),
+      item?.detail && /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: "gw-version-columns", children: [["current", "\u5F53\u524D\u6587\u4EF6"], ["before", "\u4FEE\u6539\u524D"], ["after", "\u539F\u8BA1\u5212\u5199\u5165"], ["displaced", "\u4E2D\u65AD\u65F6\u4FDD\u7559\u7684\u539F\u4EF6"]].map(([key4, title]) => /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("article", { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("h4", { children: [
           title,
           " \xB7 ",
           item.detail[key4].bytes,
           " \u5B57\u8282"
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("pre", { children: item.detail[key4].encoding === "binary" ? "\u4E8C\u8FDB\u5236\u6587\u4EF6\uFF0C\u6309\u5B8C\u6574\u5185\u5BB9\u6821\u9A8C\uFF1B\u8BF7\u7528\u5BF9\u5E94\u7F16\u8F91\u5668\u68C0\u67E5\u3002" : item.detail[key4].content ?? "\u6587\u4EF6\u4E0D\u5B58\u5728" }),
-        item.detail[key4].truncated && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("p", { children: "\u4EC5\u663E\u793A\u524D 32000 \u5B57\u7B26\uFF0C\u4E0D\u80FD\u636E\u6B64\u91CD\u5199\u6574\u4E2A\u6587\u4EF6\u3002" })
+        /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("pre", { children: item.detail[key4].encoding === "binary" ? "\u4E8C\u8FDB\u5236\u6587\u4EF6\uFF0C\u6309\u5B8C\u6574\u5185\u5BB9\u6821\u9A8C\uFF1B\u8BF7\u7528\u5BF9\u5E94\u7F16\u8F91\u5668\u68C0\u67E5\u3002" : item.detail[key4].content ?? "\u6587\u4EF6\u4E0D\u5B58\u5728" }),
+        item.detail[key4].truncated && /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("p", { children: "\u4EC5\u663E\u793A\u524D 32000 \u5B57\u7B26\uFF0C\u4E0D\u80FD\u636E\u6B64\u91CD\u5199\u6574\u4E2A\u6587\u4EF6\u3002" })
       ] }, key4)) }),
-      /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("label", { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("label", { children: [
         "\u5904\u7406\u65B9\u5F0F",
-        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("select", { "aria-label": "\u6587\u4EF6\u6062\u590D\u65B9\u5F0F", value: choice, disabled: busy2 || Boolean(blocked), onChange: (e42) => {
+        /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("select", { "aria-label": "\u6587\u4EF6\u6062\u590D\u65B9\u5F0F", value: choice, disabled: busy2 || Boolean(blocked), onChange: (e42) => {
           setChoice(e42.target.value);
           setConfirmed(false);
-        }, children: [["keep", "\u4FDD\u7559\u5F53\u524D\u6587\u4EF6"], ["before", "\u6062\u590D\u4FEE\u6539\u524D\u7248\u672C"], ["after", "\u91C7\u7528\u539F\u8BA1\u5212\u5199\u5165\u7248\u672C"]].map(([value, label]) => /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("option", { value, disabled: !item?.choices.includes(value), children: label }, value)) })
+        }, children: [["keep", "\u4FDD\u7559\u5F53\u524D\u6587\u4EF6"], ["before", "\u6062\u590D\u4FEE\u6539\u524D\u7248\u672C"], ["after", "\u91C7\u7528\u539F\u8BA1\u5212\u5199\u5165\u7248\u672C"]].map(([value, label]) => /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("option", { value, disabled: !item?.choices.includes(value), children: label }, value)) })
       ] }),
-      choice !== "keep" && /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("p", { className: "gw-small", children: [
+      choice !== "keep" && /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("p", { className: "gw-small", children: [
         "\u5C06\u4FEE\u6539 ",
         item?.path,
         "\u3002",
         item?.[choice] === "missing" ? "\u6240\u9009\u7248\u672C\u8868\u793A\u6587\u4EF6\u4E0D\u5B58\u5728\uFF0C\u6B64\u64CD\u4F5C\u4F1A\u79FB\u9664\u5F53\u524D\u6587\u4EF6\u3002" : "\u5C06\u5199\u5165\u4E0A\u9762\u663E\u793A\u7684\u5B8C\u6574\u7248\u672C\u3002",
         "\u5F53\u524D\u5185\u5BB9\u548C\u539F\u7248\u672C\u4F1A\u4FDD\u7559\u3002"
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("details", { children: [
-        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("summary", { children: "\u539F\u4EF6\u4E0E\u9A8C\u8BC1\u8303\u56F4" }),
-        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("p", { className: "gw-small", children: view.note }),
-        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("p", { className: "gw-path", children: item?.displacedPath })
+      /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("details", { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("summary", { children: "\u539F\u4EF6\u4E0E\u9A8C\u8BC1\u8303\u56F4" }),
+        /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("p", { className: "gw-small", children: view.note }),
+        /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("p", { className: "gw-path", children: item?.displacedPath })
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("label", { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("label", { children: [
         "\u5904\u7406\u539F\u56E0",
-        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("textarea", { "aria-label": "\u6587\u4EF6\u6062\u590D\u539F\u56E0", rows: 2, maxLength: 4e3, value: reason, disabled: busy2, onChange: (e42) => setReason(e42.target.value) })
+        /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("textarea", { "aria-label": "\u6587\u4EF6\u6062\u590D\u539F\u56E0", rows: 2, maxLength: 4e3, value: reason, disabled: busy2, onChange: (e42) => setReason(e42.target.value) })
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("label", { className: "gw-recovery-check", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("input", { type: "checkbox", checked: confirmed, disabled: busy2 || Boolean(blocked), onChange: (e42) => setConfirmed(e42.target.checked) }),
+      /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("label", { className: "gw-recovery-check", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("input", { type: "checkbox", checked: confirmed, disabled: busy2 || Boolean(blocked), onChange: (e42) => setConfirmed(e42.target.checked) }),
         "\u5DF2\u505C\u6B62 Agent\u3001\u4FDD\u5B58\u5E76\u5173\u95ED\u7F16\u8F91\u5668\uFF0C\u6838\u5BF9\u5F53\u524D\u6587\u4EF6\u548C\u6240\u9009\u7248\u672C\u3002"
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("footer", { children: /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("button", { className: "gw-primary", disabled: busy2 || Boolean(blocked) || !confirmed || !reason.trim() || !item, onClick: resolve, children: busy2 ? "\u6B63\u5728\u5904\u7406\u2026" : "\u6309\u6240\u9009\u65B9\u5F0F\u5904\u7406" }) })
+      /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("footer", { children: /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("button", { className: "gw-primary", disabled: busy2 || Boolean(blocked) || !confirmed || !reason.trim() || !item, onClick: resolve, children: busy2 ? "\u6B63\u5728\u5904\u7406\u2026" : "\u6309\u6240\u9009\u65B9\u5F0F\u5904\u7406" }) })
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("button", { className: "gw-secondary", disabled: busy2, onClick: () => {
+    /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("button", { className: "gw-secondary", disabled: busy2, onClick: () => {
       setBusy(true);
       setError("");
       reload().catch((e42) => setError(e42.message)).finally(() => setBusy(false));
@@ -2664,18 +2854,18 @@ function FileRecovery({ api, Modal: Modal2, blocked, onClose, onResolved }) {
 }
 
 // src/ProjectNavigation.jsx
-var import_react14 = __toESM(require("react"), 1);
-var import_jsx_runtime11 = require("react/jsx-runtime");
+var import_react15 = __toESM(require("react"), 1);
+var import_jsx_runtime12 = require("react/jsx-runtime");
 function ProjectNavigation({ configuration, navigation, busy: busy2, onAction, onAdd, onSelected, onManage, conversationActive = true }) {
-  const [open, setOpen] = (0, import_react14.useState)(false);
-  const [error, setError] = (0, import_react14.useState)("");
-  const [menu, setMenu] = (0, import_react14.useState)(null), [confirmRemove, setConfirmRemove] = (0, import_react14.useState)(false);
-  const dragged = (0, import_react14.useRef)(null);
-  const menuRef = (0, import_react14.useRef)(null);
-  (0, import_react14.useEffect)(() => {
+  const [open, setOpen] = (0, import_react15.useState)(false);
+  const [error, setError] = (0, import_react15.useState)("");
+  const [menu, setMenu] = (0, import_react15.useState)(null), [confirmRemove, setConfirmRemove] = (0, import_react15.useState)(false);
+  const dragged = (0, import_react15.useRef)(null);
+  const menuRef = (0, import_react15.useRef)(null);
+  (0, import_react15.useEffect)(() => {
     if (menu) menuRef.current?.querySelector("button:not(:disabled)")?.focus();
   }, [menu]);
-  (0, import_react14.useEffect)(() => {
+  (0, import_react15.useEffect)(() => {
     if (!menu) return;
     const close = (e42) => {
       if (!menuRef.current?.contains(e42.target)) {
@@ -2686,8 +2876,8 @@ function ProjectNavigation({ configuration, navigation, busy: busy2, onAction, o
     document.addEventListener("pointerdown", close);
     return () => document.removeEventListener("pointerdown", close);
   }, [menu]);
-  const dialog = (0, import_react14.useRef)(null);
-  (0, import_react14.useEffect)(() => {
+  const dialog = (0, import_react15.useRef)(null);
+  (0, import_react15.useEffect)(() => {
     if (open) dialog.current?.showModal();
     else dialog.current?.close();
   }, [open]);
@@ -2726,20 +2916,20 @@ function ProjectNavigation({ configuration, navigation, busy: busy2, onAction, o
     order.splice(target, 0, order.splice(index, 1)[0]);
     manage({ action: "reorder", order });
   }
-  const content = /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(import_jsx_runtime11.Fragment, { children: [
-    /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("div", { className: "gw-project-navigation-heading", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("strong", { children: "\u6211\u7684\u9879\u76EE" }),
-      /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("button", { "aria-label": "\u6DFB\u52A0\u9879\u76EE", title: "\u65B0\u5EFA\u9879\u76EE", disabled: busy2, onClick: () => {
+  const content = /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)(import_jsx_runtime12.Fragment, { children: [
+    /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "gw-project-navigation-heading", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("strong", { children: "\u6211\u7684\u9879\u76EE" }),
+      /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("button", { "aria-label": "\u6DFB\u52A0\u9879\u76EE", title: "\u65B0\u5EFA\u9879\u76EE", disabled: busy2, onClick: () => {
         setOpen(false);
         onAdd();
       }, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(n4, { size: 16 }),
-        /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("span", { children: "\u65B0\u5EFA" })
+        /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(n4, { size: 16 }),
+        /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("span", { children: "\u65B0\u5EFA" })
       ] })
     ] }),
-    error && /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("p", { role: "alert", children: error }),
-    groups.map((group, index) => /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("details", { open: menu === group.key || group.selected || group.sessions.some((s9) => s9.selected), children: [
-      /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("summary", { title: group.projectRoot, draggable: Boolean(onManage && !busy2), onContextMenu: (event) => {
+    error && /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("p", { role: "alert", children: error }),
+    groups.map((group, index) => /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("details", { open: menu === group.key || group.selected || group.sessions.some((s9) => s9.selected), children: [
+      /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("summary", { title: group.projectRoot, draggable: Boolean(onManage && !busy2), onContextMenu: (event) => {
         if (onManage) showMenu(event, group);
       }, onDragStart: (event) => {
         dragged.current = group.key;
@@ -2754,95 +2944,95 @@ function ProjectNavigation({ configuration, navigation, busy: busy2, onAction, o
         move(dragged.current, group.key);
         dragged.current = null;
       }, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(p2, { size: 18 }),
-        /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("span", { className: "gw-project-title", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(p2, { size: 18 }),
+        /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("span", { className: "gw-project-title", children: [
           group.title,
-          group.locationHint && /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("small", { className: "gw-project-location", children: group.locationHint })
+          group.locationHint && /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("small", { className: "gw-project-location", children: group.locationHint })
         ] }),
-        group.runningCount > 0 && /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("span", { className: "gw-running-count", children: [
+        group.runningCount > 0 && /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("span", { className: "gw-running-count", children: [
           group.runningCount,
           " \u8FDB\u884C\u4E2D"
         ] }),
-        onManage && /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("button", { type: "button", className: "gw-project-menu-trigger", "aria-label": `\u7BA1\u7406\u9879\u76EE\uFF1A${group.title}`, "aria-expanded": menu === group.key, onClick: (event) => showMenu(event, group), children: "\xB7\xB7\xB7" })
+        onManage && /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("button", { type: "button", className: "gw-project-menu-trigger", "aria-label": `\u7BA1\u7406\u9879\u76EE\uFF1A${group.title}`, "aria-expanded": menu === group.key, onClick: (event) => showMenu(event, group), children: "\xB7\xB7\xB7" })
       ] }),
-      menu === group.key && /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("div", { className: "gw-project-menu", role: "group", "aria-label": `\u9879\u76EE\u64CD\u4F5C\uFF1A${group.title}`, ref: menuRef, onKeyDown: (event) => {
+      menu === group.key && /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("div", { className: "gw-project-menu", role: "group", "aria-label": `\u9879\u76EE\u64CD\u4F5C\uFF1A${group.title}`, ref: menuRef, onKeyDown: (event) => {
         if (event.key === "Escape") {
           setMenu(null);
           setConfirmRemove(false);
           event.currentTarget.parentElement.querySelector("summary")?.focus();
         }
-      }, children: confirmRemove ? /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(import_jsx_runtime11.Fragment, { children: [
-        /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("p", { children: "\u53EA\u79FB\u51FA\u5DE5\u4F5C\u53F0\u5217\u8868\u3002\u5DE5\u7A0B\u6587\u4EF6\u548C\u539F\u5BF9\u8BDD\u4FDD\u7559\u3002" }),
-        /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("button", { disabled: busy2, onClick: () => manage({ action: "remove", projectRoot: group.projectRoot }), children: "\u786E\u8BA4\u79FB\u9664" }),
-        /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("button", { onClick: () => setConfirmRemove(false), children: "\u53D6\u6D88" })
-      ] }) : /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(import_jsx_runtime11.Fragment, { children: [
-        /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("button", { disabled: busy2 || index === 0, onClick: () => move(group.key, groups[index - 1].key), children: "\u4E0A\u79FB" }),
-        /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("button", { disabled: busy2 || index === groups.length - 1, onClick: () => move(group.key, groups[index + 1].key), children: "\u4E0B\u79FB" }),
-        /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("button", { disabled: busy2 || group.selected || group.runningCount > 0, onClick: () => setConfirmRemove(true), children: "\u4ECE\u5217\u8868\u79FB\u9664" }),
-        group.selected ? /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("p", { children: "\u8BF7\u5148\u5207\u6362\u5230\u5176\u4ED6\u9879\u76EE\u518D\u79FB\u9664\u3002" }) : group.runningCount > 0 ? /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("p", { children: "\u5148\u7ED3\u675F\u6B64\u9879\u76EE\u7684\u6267\u884C\u3002" }) : null
+      }, children: confirmRemove ? /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)(import_jsx_runtime12.Fragment, { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("p", { children: "\u53EA\u79FB\u51FA\u5DE5\u4F5C\u53F0\u5217\u8868\u3002\u5DE5\u7A0B\u6587\u4EF6\u548C\u539F\u5BF9\u8BDD\u4FDD\u7559\u3002" }),
+        /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("button", { disabled: busy2, onClick: () => manage({ action: "remove", projectRoot: group.projectRoot }), children: "\u786E\u8BA4\u79FB\u9664" }),
+        /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("button", { onClick: () => setConfirmRemove(false), children: "\u53D6\u6D88" })
+      ] }) : /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)(import_jsx_runtime12.Fragment, { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("button", { disabled: busy2 || index === 0, onClick: () => move(group.key, groups[index - 1].key), children: "\u4E0A\u79FB" }),
+        /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("button", { disabled: busy2 || index === groups.length - 1, onClick: () => move(group.key, groups[index + 1].key), children: "\u4E0B\u79FB" }),
+        /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("button", { disabled: busy2 || group.selected || group.runningCount > 0, onClick: () => setConfirmRemove(true), children: "\u4ECE\u5217\u8868\u79FB\u9664" }),
+        group.selected ? /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("p", { children: "\u8BF7\u5148\u5207\u6362\u5230\u5176\u4ED6\u9879\u76EE\u518D\u79FB\u9664\u3002" }) : group.runningCount > 0 ? /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("p", { children: "\u5148\u7ED3\u675F\u6B64\u9879\u76EE\u7684\u6267\u884C\u3002" }) : null
       ] }) }),
-      /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("button", { className: "gw-new-project-chat", disabled: busy2, onClick: () => select("\u65B0\u5EFA\u9879\u76EE\u5BF9\u8BDD", group.projectRoot, null), children: "\uFF0B \u65B0\u5EFA\u5BF9\u8BDD" }),
-      !group.sessions.length && /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("p", { className: "gw-small gw-muted", children: "\u8FD8\u6CA1\u6709\u5BF9\u8BDD" }),
-      group.sessions.map((session) => /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("button", { className: "gw-project-session", "aria-current": session.selected && conversationActive ? "page" : void 0, title: session.title, disabled: busy2, onClick: () => select("\u6253\u5F00\u9879\u76EE\u5BF9\u8BDD", group.projectRoot, session.id), children: [
-        /* @__PURE__ */ (0, import_jsx_runtime11.jsx)(s3, { size: 17 }),
-        /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("span", { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("button", { className: "gw-new-project-chat", disabled: busy2, onClick: () => select("\u65B0\u5EFA\u9879\u76EE\u5BF9\u8BDD", group.projectRoot, null), children: "\uFF0B \u65B0\u5EFA\u5BF9\u8BDD" }),
+      !group.sessions.length && /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("p", { className: "gw-small gw-muted", children: "\u8FD8\u6CA1\u6709\u5BF9\u8BDD" }),
+      group.sessions.map((session) => /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("button", { className: "gw-project-session", "aria-current": session.selected && conversationActive ? "page" : void 0, title: session.title, disabled: busy2, onClick: () => select("\u6253\u5F00\u9879\u76EE\u5BF9\u8BDD", group.projectRoot, session.id), children: [
+        /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(s3, { size: 17 }),
+        /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("span", { children: [
           session.running ? "\u25CF " : "",
           session.title
         ] })
       ] }, session.id))
     ] }, group.key))
   ] });
-  return /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)(import_jsx_runtime11.Fragment, { children: [
-    /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("button", { className: "gw-project-browser-toggle", "aria-label": "\u9009\u62E9\u9879\u76EE\u4E0E\u5BF9\u8BDD", title: "\u9009\u62E9\u9879\u76EE\u4E0E\u5BF9\u8BDD", "aria-haspopup": "dialog", "aria-expanded": open, onClick: () => {
+  return /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)(import_jsx_runtime12.Fragment, { children: [
+    /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("button", { className: "gw-project-browser-toggle", "aria-label": "\u9009\u62E9\u9879\u76EE\u4E0E\u5BF9\u8BDD", title: "\u9009\u62E9\u9879\u76EE\u4E0E\u5BF9\u8BDD", "aria-haspopup": "dialog", "aria-expanded": open, onClick: () => {
       setError("");
       setOpen(true);
     }, children: "\u9879\u76EE" }),
-    /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("section", { className: "gw-project-navigation gw-desktop-projects", "aria-label": "\u6E38\u620F\u9879\u76EE\u4E0E\u5BF9\u8BDD", children: content }),
-    /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("dialog", { ref: dialog, className: "gw-modal gw-project-browser", "aria-label": "\u9009\u62E9\u9879\u76EE\u4E0E\u5BF9\u8BDD", onCancel: (e42) => {
+    /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("section", { className: "gw-project-navigation gw-desktop-projects", "aria-label": "\u6E38\u620F\u9879\u76EE\u4E0E\u5BF9\u8BDD", children: content }),
+    /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("dialog", { ref: dialog, className: "gw-modal gw-project-browser", "aria-label": "\u9009\u62E9\u9879\u76EE\u4E0E\u5BF9\u8BDD", onCancel: (e42) => {
       e42.preventDefault();
       setOpen(false);
     }, onClick: (e42) => {
       if (e42.target === dialog.current) setOpen(false);
     }, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime11.jsxs)("header", { children: [
-        /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("h2", { children: "\u9009\u62E9\u9879\u76EE\u4E0E\u5BF9\u8BDD" }),
-        /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("button", { className: "gw-icon-button", "aria-label": "\u5173\u95ED\u9879\u76EE\u5217\u8868", onClick: () => setOpen(false), children: "\u5173\u95ED" })
+      /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("header", { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("h2", { children: "\u9009\u62E9\u9879\u76EE\u4E0E\u5BF9\u8BDD" }),
+        /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("button", { className: "gw-icon-button", "aria-label": "\u5173\u95ED\u9879\u76EE\u5217\u8868", onClick: () => setOpen(false), children: "\u5173\u95ED" })
       ] }),
-      error && /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("p", { role: "alert", children: error }),
-      /* @__PURE__ */ (0, import_jsx_runtime11.jsx)("section", { className: "gw-project-navigation", "aria-label": "\u6E38\u620F\u9879\u76EE\u4E0E\u5BF9\u8BDD", children: open && content })
+      error && /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("p", { role: "alert", children: error }),
+      /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("section", { className: "gw-project-navigation", "aria-label": "\u6E38\u620F\u9879\u76EE\u4E0E\u5BF9\u8BDD", children: open && content })
     ] })
   ] });
 }
 
 // src/DevelopmentReports.jsx
-var import_react16 = __toESM(require("react"), 1);
-var import_jsx_runtime12 = require("react/jsx-runtime");
+var import_react17 = __toESM(require("react"), 1);
+var import_jsx_runtime13 = require("react/jsx-runtime");
 var statuses = { failed: "\u5931\u8D25\u5F85\u590D\u76D8", cancelled: "\u5DF2\u4E2D\u65AD", "awaiting-review": "\u5F85\u4EBA\u5DE5\u9A8C\u6536", accepted: "\u5DF2\u8BB0\u5F55\u4EBA\u5DE5\u901A\u8FC7" };
 function AnalysisFinding({ finding }) {
   const kind = { difficulty: "\u96BE\u70B9", attempt: "\u5C1D\u8BD5", cause: "\u539F\u56E0", next: "\u4E0B\u4E00\u6B65", lesson: "\u7ECF\u9A8C\u5019\u9009" }[finding.kind];
   const basis = { reported: "\u8F6C\u8FF0\u8BB0\u5F55", hypothesis: "\u5047\u8BBE\u5F85\u9A8C\u8BC1", supported: "AI \u5224\u65AD\u6709\u6765\u6E90\u4F9D\u636E" }[finding.certainty];
-  return /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { children: [
-    /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("h4", { children: [
+  return /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { children: [
+    /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("h4", { children: [
       kind,
       " \xB7 ",
       finding.title
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("p", { className: "gw-small", children: finding.kind === "next" ? `\u5F85\u6267\u884C\u5EFA\u8BAE \xB7 ${basis}` : basis }),
-    /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("p", { children: finding.detail }),
-    /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("p", { className: "gw-small gw-path", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("p", { className: "gw-small", children: finding.kind === "next" ? `\u5F85\u6267\u884C\u5EFA\u8BAE \xB7 ${basis}` : basis }),
+    /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("p", { children: finding.detail }),
+    /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("p", { className: "gw-small gw-path", children: [
       "\u6765\u6E90\uFF1A",
       finding.evidenceRefs.join("\u3001") || "\u65E0\uFF0C\u4ECD\u662F\u5047\u8BBE"
     ] })
   ] });
 }
 function StageSummary({ stage, onAnalyze, canChat, busy: busy2 }) {
-  return /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("article", { className: "gw-development-report", "aria-label": `${stage.milestoneId ? "\u9879\u76EE\u9636\u6BB5" : "\u65B9\u6848\u6C47\u603B"}\uFF1A${stage.title}`, children: [
-    /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("h2", { children: [
+  return /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("article", { className: "gw-development-report", "aria-label": `${stage.milestoneId ? "\u9879\u76EE\u9636\u6BB5" : "\u65B9\u6848\u6C47\u603B"}\uFF1A${stage.title}`, children: [
+    /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("h2", { children: [
       stage.milestoneId ? stage.current ? "\u9879\u76EE\u9636\u6BB5\u590D\u76D8" : "\u5386\u53F2\u9879\u76EE\u9636\u6BB5" : stage.current ? "\u5F53\u524D\u65B9\u6848\u6C47\u603B" : "\u5386\u53F2\u65B9\u6848\u6C47\u603B",
       " \xB7 ",
       stage.title
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("p", { children: [
+    /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("p", { children: [
       "\u5DF2\u8BB0\u5F55\u4EBA\u5DE5\u901A\u8FC7 ",
       stage.acceptedCount,
       " / ",
@@ -2853,202 +3043,202 @@ function StageSummary({ stage, onAnalyze, canChat, busy: busy2 }) {
       stage.retryCount,
       " \u6B21\u91CD\u8BD5"
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("section", { "aria-label": `\u6574\u9636\u6BB5\u590D\u76D8\uFF1A${stage.title}`, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("h3", { children: "\u6574\u9636\u6BB5\u590D\u76D8" }),
-      stage.analysis ? /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)(import_jsx_runtime12.Fragment, { children: [
-        /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("p", { children: stage.analysisStale ? "\u9636\u6BB5\u6765\u6E90\u5DF2\u53D8\u5316\uFF0C\u4EE5\u4E0B\u7ED3\u8BBA\u9700\u8981\u91CD\u65B0\u6838\u5BF9\u3002" : "AI \u7EFC\u5408\u5206\u6790\uFF0C\u4EC5\u4F9B\u6838\u5BF9\uFF0C\u4E0D\u4EE3\u8868\u9636\u6BB5\u5DF2\u9A8C\u6536\u3002" }),
-        /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("p", { children: stage.analysis.summary }),
-        /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("details", { children: [
-          /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("summary", { children: [
+    /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("section", { "aria-label": `\u6574\u9636\u6BB5\u590D\u76D8\uFF1A${stage.title}`, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("h3", { children: "\u6574\u9636\u6BB5\u590D\u76D8" }),
+      stage.analysis ? /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)(import_jsx_runtime13.Fragment, { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("p", { children: stage.analysisStale ? "\u9636\u6BB5\u6765\u6E90\u5DF2\u53D8\u5316\uFF0C\u4EE5\u4E0B\u7ED3\u8BBA\u9700\u8981\u91CD\u65B0\u6838\u5BF9\u3002" : "AI \u7EFC\u5408\u5206\u6790\uFF0C\u4EC5\u4F9B\u6838\u5BF9\uFF0C\u4E0D\u4EE3\u8868\u9636\u6BB5\u5DF2\u9A8C\u6536\u3002" }),
+        /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("p", { children: stage.analysis.summary }),
+        /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("details", { children: [
+          /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("summary", { children: [
             "\u5C55\u5F00\u9636\u6BB5\u5206\u6790\uFF08",
             stage.analysis.findings.length,
             "\uFF09"
           ] }),
-          stage.analysis.findings.map((item) => /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(AnalysisFinding, { finding: item }, item.id))
+          stage.analysis.findings.map((item) => /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(AnalysisFinding, { finding: item }, item.id))
         ] })
-      ] }) : /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("p", { className: "gw-small", children: "\u7EFC\u5408\u5404\u6279\u6B21\u7684\u96BE\u70B9\u3001\u91CD\u590D\u5C1D\u8BD5\u548C\u9057\u7559\u95EE\u9898\uFF0C\u4E0D\u91CD\u590D\u5806\u53E0\u6BCF\u6279\u6458\u8981\u3002" }),
-      /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("button", { className: "gw-secondary", disabled: busy2 || !canChat || !stage.executionCount, onClick: () => onAnalyze(stage), children: stage.analysisStale ? "\u8BF7 AI \u66F4\u65B0\u9636\u6BB5\u590D\u76D8" : "\u8BF7 AI \u590D\u76D8\u6574\u4E2A\u9636\u6BB5" }),
-      !canChat && /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("p", { className: "gw-small gw-muted", children: "\u8FDE\u63A5\u672C\u9879\u76EE\u5BF9\u8BDD\u540E\u53EF\u8BF7\u6C42\u9636\u6BB5\u590D\u76D8\u3002" }),
-      Boolean(stage.analysisHistory?.length) && /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("details", { children: [
-        /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("summary", { children: [
+      ] }) : /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("p", { className: "gw-small", children: "\u7EFC\u5408\u5404\u6279\u6B21\u7684\u96BE\u70B9\u3001\u91CD\u590D\u5C1D\u8BD5\u548C\u9057\u7559\u95EE\u9898\uFF0C\u4E0D\u91CD\u590D\u5806\u53E0\u6BCF\u6279\u6458\u8981\u3002" }),
+      /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("button", { className: "gw-secondary", disabled: busy2 || !canChat || !stage.executionCount, onClick: () => onAnalyze(stage), children: stage.analysisStale ? "\u8BF7 AI \u66F4\u65B0\u9636\u6BB5\u590D\u76D8" : "\u8BF7 AI \u590D\u76D8\u6574\u4E2A\u9636\u6BB5" }),
+      !canChat && /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("p", { className: "gw-small gw-muted", children: "\u8FDE\u63A5\u672C\u9879\u76EE\u5BF9\u8BDD\u540E\u53EF\u8BF7\u6C42\u9636\u6BB5\u590D\u76D8\u3002" }),
+      Boolean(stage.analysisHistory?.length) && /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("details", { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("summary", { children: [
           "\u9636\u6BB5\u5206\u6790\u5386\u53F2\uFF08",
           stage.analysisHistory.length,
           "\uFF09"
         ] }),
-        stage.analysisHistory.map((item, index) => /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("p", { children: [
+        stage.analysisHistory.map((item, index) => /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("p", { children: [
           new Date(item.at).toLocaleString("zh-CN"),
           " \xB7 ",
           item.summary
         ] }, index))
       ] })
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(AcceptanceCoverage, { coverage: stage.acceptanceCoverage, label: stage.milestoneId ? "\u672C\u9636\u6BB5\u9A8C\u6536" : "\u65B9\u6848\u9A8C\u6536" }),
-    stage.current && !stage.confirmed && /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("p", { children: "\u5F53\u524D\u65B9\u6848\u5C1A\u672A\u786E\u8BA4\uFF0C\u5148\u56DE\u5F00\u53D1\u8BA1\u5212\u6838\u5BF9\u8303\u56F4\u3002" }),
-    !stage.taskCount && /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("p", { children: "\u5C1A\u672A\u62C6\u5206\u4EFB\u52A1\uFF0C\u4E0D\u80FD\u636E\u6B64\u5224\u65AD\u9636\u6BB5\u5B8C\u6210\u3002" }),
-    /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("details", { children: [
-      /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("summary", { children: [
+    /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(AcceptanceCoverage, { coverage: stage.acceptanceCoverage, label: stage.milestoneId ? "\u672C\u9636\u6BB5\u9A8C\u6536" : "\u65B9\u6848\u9A8C\u6536" }),
+    stage.current && !stage.confirmed && /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("p", { children: "\u5F53\u524D\u65B9\u6848\u5C1A\u672A\u786E\u8BA4\uFF0C\u5148\u56DE\u5F00\u53D1\u8BA1\u5212\u6838\u5BF9\u8303\u56F4\u3002" }),
+    !stage.taskCount && /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("p", { children: "\u5C1A\u672A\u62C6\u5206\u4EFB\u52A1\uFF0C\u4E0D\u80FD\u636E\u6B64\u5224\u65AD\u9636\u6BB5\u5B8C\u6210\u3002" }),
+    /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("details", { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("summary", { children: [
         "\u672A\u5B8C\u6210\u4EFB\u52A1\u4E0E\u4F9D\u8D56\uFF08",
         stage.unfinished.length,
         "\uFF09"
       ] }),
-      stage.unfinished.map((task) => /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { children: [
-        /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("p", { children: [
+      stage.unfinished.map((task) => /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("p", { children: [
           task.title,
           " \xB7 ",
           statuses[task.status] ?? { pending: "\u5F85\u5F00\u53D1", running: "\u5F00\u53D1\u4E2D" }[task.status] ?? task.status
         ] }),
-        task.dependencies.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("p", { className: "gw-small", children: [
+        task.dependencies.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("p", { className: "gw-small", children: [
           "\u7B49\u5F85\uFF1A",
           task.dependencies.map((item) => item.title).join("\u3001")
         ] })
       ] }, task.id))
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("details", { children: [
-      /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("summary", { children: "\u8303\u56F4\u53D8\u5316\u4E0E\u6267\u884C\u5386\u53F2" }),
-      /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("p", { className: "gw-small gw-muted", children: stage.note }),
-      stage.scopeChanges ? /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)(import_jsx_runtime12.Fragment, { children: [
-        /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("p", { children: [
+    /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("details", { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("summary", { children: "\u8303\u56F4\u53D8\u5316\u4E0E\u6267\u884C\u5386\u53F2" }),
+      /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("p", { className: "gw-small gw-muted", children: stage.note }),
+      stage.scopeChanges ? /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)(import_jsx_runtime13.Fragment, { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("p", { children: [
           "\u8F83\u4E0A\u6B21\u65B9\u6848\u65B0\u589E\uFF1A",
           stage.scopeChanges.added.join("\uFF1B") || "\u65E0"
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("p", { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("p", { children: [
           "\u79FB\u51FA\u672C\u671F\uFF1A",
           stage.scopeChanges.removed.join("\uFF1B") || "\u65E0"
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("p", { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("p", { children: [
           "\u65B0\u589E\u6392\u9664\u9879\uFF1A",
           stage.scopeChanges.excludedAdded.join("\uFF1B") || "\u65E0"
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("p", { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("p", { children: [
           "\u53D6\u6D88\u6392\u9664\u9879\uFF1A",
           stage.scopeChanges.excludedRemoved.join("\uFF1B") || "\u65E0"
         ] })
-      ] }) : /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("p", { children: "\u6CA1\u6709\u53EF\u6BD4\u8F83\u7684\u524D\u4E00\u7248\u65B9\u6848\u3002" }),
-      /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("p", { children: [
+      ] }) : /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("p", { children: "\u6CA1\u6709\u53EF\u6BD4\u8F83\u7684\u524D\u4E00\u7248\u65B9\u6848\u3002" }),
+      /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("p", { children: [
         "\u5386\u53F2\u5931\u8D25\u6216\u4E2D\u65AD\u7684\u5F00\u53D1\u6279\u6B21\uFF1A",
         stage.failedExecutionCount,
         "\uFF1B\u68C0\u6D4B\u5230\u53D8\u66F4\u7684\u6587\u4EF6\uFF1A",
         stage.changedPaths.length,
         "\u3002"
       ] }),
-      stage.scanIncomplete && /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("p", { children: "\u90E8\u5206\u6279\u6B21\u626B\u63CF\u4E0D\u5B8C\u6574\uFF0C\u6587\u4EF6\u6570\u4E0D\u4EE3\u8868\u5168\u90E8\u53D8\u66F4\u3002" })
+      stage.scanIncomplete && /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("p", { children: "\u90E8\u5206\u6279\u6B21\u626B\u63CF\u4E0D\u5B8C\u6574\uFF0C\u6587\u4EF6\u6570\u4E0D\u4EE3\u8868\u5168\u90E8\u53D8\u66F4\u3002" })
     ] })
   ] });
 }
 function ReportCard({ report, onNote, onAnalyze, canChat, busy: busy2 }) {
-  const [note, setNote] = (0, import_react16.useState)("");
+  const [note, setNote] = (0, import_react17.useState)("");
   const facts = report.facts;
-  return /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("article", { className: "gw-development-report", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("h2", { children: facts.title }),
-    /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("p", { className: "gw-small gw-muted", children: [
+  return /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("article", { className: "gw-development-report", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("h2", { children: facts.title }),
+    /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("p", { className: "gw-small gw-muted", children: [
       statuses[facts.status] ?? facts.status,
       " \xB7 \u8BB0\u5F55\u7248\u672C ",
       report.revision,
       " \xB7 ",
       new Date(report.updatedAt).toLocaleString("zh-CN")
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("p", { children: facts.reportedSummary || "\u5C1A\u65E0\u672C\u6B21\u6267\u884C\u7ED3\u679C\u8BF4\u660E\u3002" }),
-    /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("section", { "aria-label": `AI\u590D\u76D8\uFF1A${facts.title}`, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("h3", { children: "AI \u590D\u76D8" }),
-      report.analysis ? /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)(import_jsx_runtime12.Fragment, { children: [
-        /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("p", { children: report.analysisStale ? "\u6765\u6E90\u5DF2\u6709\u66F4\u65B0\uFF0C\u4EE5\u4E0B\u662F\u65E7\u5206\u6790\uFF0C\u9700\u91CD\u65B0\u590D\u76D8\u3002" : "AI \u5206\u6790\u4EC5\u4F9B\u6838\u5BF9\uFF0C\u4E0D\u4EE3\u8868\u6839\u56E0\u5DF2\u7ECF\u8BC1\u5B9E\u3002" }),
-        /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("p", { children: report.analysis.summary }),
-        /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("details", { children: [
-          /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("summary", { children: [
+    /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("p", { children: facts.reportedSummary || "\u5C1A\u65E0\u672C\u6B21\u6267\u884C\u7ED3\u679C\u8BF4\u660E\u3002" }),
+    /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("section", { "aria-label": `AI\u590D\u76D8\uFF1A${facts.title}`, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("h3", { children: "AI \u590D\u76D8" }),
+      report.analysis ? /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)(import_jsx_runtime13.Fragment, { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("p", { children: report.analysisStale ? "\u6765\u6E90\u5DF2\u6709\u66F4\u65B0\uFF0C\u4EE5\u4E0B\u662F\u65E7\u5206\u6790\uFF0C\u9700\u91CD\u65B0\u590D\u76D8\u3002" : "AI \u5206\u6790\u4EC5\u4F9B\u6838\u5BF9\uFF0C\u4E0D\u4EE3\u8868\u6839\u56E0\u5DF2\u7ECF\u8BC1\u5B9E\u3002" }),
+        /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("p", { children: report.analysis.summary }),
+        /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("details", { children: [
+          /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("summary", { children: [
             "\u67E5\u770B\u5206\u6790\u4F9D\u636E\uFF08",
             report.analysis.findings.length,
             "\uFF09"
           ] }),
-          report.analysis.findings.map((finding) => /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(AnalysisFinding, { finding }, finding.id))
+          report.analysis.findings.map((finding) => /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(AnalysisFinding, { finding }, finding.id))
         ] })
-      ] }) : /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("p", { className: "gw-small gw-muted", children: "\u5C1A\u65E0 AI \u5206\u6790\u3002\u5148\u4ECE\u8BB0\u5F55\u6838\u5BF9\u96BE\u70B9\u3001\u5C1D\u8BD5\u3001\u539F\u56E0\u5047\u8BBE\u548C\u4E0B\u4E00\u6B65\u3002" }),
-      /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("button", { className: "gw-secondary", disabled: busy2 || !canChat, onClick: () => onAnalyze(report), children: report.analysisStale ? "\u8BF7 AI \u91CD\u65B0\u590D\u76D8" : "\u8BF7 AI \u5206\u6790\u672C\u6279\u5F00\u53D1" }),
-      !canChat && /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("p", { className: "gw-small gw-muted", children: "\u8FDE\u63A5\u672C\u9879\u76EE\u7684 DSH \u5BF9\u8BDD\u540E\u53EF\u8BF7\u6C42\u590D\u76D8\u3002" })
+      ] }) : /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("p", { className: "gw-small gw-muted", children: "\u5C1A\u65E0 AI \u5206\u6790\u3002\u5148\u4ECE\u8BB0\u5F55\u6838\u5BF9\u96BE\u70B9\u3001\u5C1D\u8BD5\u3001\u539F\u56E0\u5047\u8BBE\u548C\u4E0B\u4E00\u6B65\u3002" }),
+      /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("button", { className: "gw-secondary", disabled: busy2 || !canChat, onClick: () => onAnalyze(report), children: report.analysisStale ? "\u8BF7 AI \u91CD\u65B0\u590D\u76D8" : "\u8BF7 AI \u5206\u6790\u672C\u6279\u5F00\u53D1" }),
+      !canChat && /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("p", { className: "gw-small gw-muted", children: "\u8FDE\u63A5\u672C\u9879\u76EE\u7684 DSH \u5BF9\u8BDD\u540E\u53EF\u8BF7\u6C42\u590D\u76D8\u3002" })
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("details", { children: [
-      /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("summary", { children: "\u67E5\u770B\u76EE\u6807\u3001\u53D8\u66F4\u4E0E\u9A8C\u8BC1" }),
-      /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("h3", { children: "\u76EE\u6807\u4E0E\u8303\u56F4" }),
-      /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("p", { children: [
+    /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("details", { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("summary", { children: "\u67E5\u770B\u76EE\u6807\u3001\u53D8\u66F4\u4E0E\u9A8C\u8BC1" }),
+      /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("h3", { children: "\u76EE\u6807\u4E0E\u8303\u56F4" }),
+      /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("p", { children: [
         facts.planTitle,
         " \xB7 ",
         facts.acceptance
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("ul", { children: facts.scope.map((item, index) => /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("li", { children: item }, index)) }),
-      facts.planSource === "unavailable" && /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("p", { children: "\u6B64\u4EFB\u52A1\u7684\u5386\u53F2\u65B9\u6848\u65E0\u6CD5\u6838\u5BF9\uFF0C\u8303\u56F4\u4FDD\u6301\u7A7A\u7F3A\uFF0C\u8BF7\u67E5\u9605\u539F\u59CB\u5F00\u53D1\u8BB0\u5F55\u3002" }),
-      /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("p", { className: "gw-small", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("ul", { children: facts.scope.map((item, index) => /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("li", { children: item }, index)) }),
+      facts.planSource === "unavailable" && /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("p", { children: "\u6B64\u4EFB\u52A1\u7684\u5386\u53F2\u65B9\u6848\u65E0\u6CD5\u6838\u5BF9\uFF0C\u8303\u56F4\u4FDD\u6301\u7A7A\u7F3A\uFF0C\u8BF7\u67E5\u9605\u539F\u59CB\u5F00\u53D1\u8BB0\u5F55\u3002" }),
+      /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("p", { className: "gw-small", children: [
         "\u672C\u671F\u4E0D\u505A\uFF1A",
         facts.excluded.join("\uFF1B") || "\u672A\u8BB0\u5F55"
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("h3", { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("h3", { children: [
         "\u68C0\u6D4B\u5230\u7684\u53D8\u66F4\uFF08",
         facts.changes.paths.length,
         " \u4E2A\u6587\u4EF6\uFF09"
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("p", { className: "gw-small gw-muted", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("p", { className: "gw-small gw-muted", children: [
         facts.changes.note,
         facts.changes.scanComplete ? "" : " \u672C\u6B21\u626B\u63CF\u4E0D\u5B8C\u6574\u3002"
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("ul", { children: facts.changes.paths.map((file) => /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("li", { className: "gw-path", children: file }, file)) }),
-      /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("h3", { children: "\u6267\u884C\u8005\u63D0\u4EA4\u7684\u8BC1\u636E" }),
-      /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("p", { className: "gw-small gw-muted", children: "\u4EE5\u4E0B\u4E3A\u6267\u884C\u8005\u8BB0\u5F55\uFF0C\u4E0D\u81EA\u52A8\u89C6\u4E3A\u72EC\u7ACB\u9A8C\u8BC1\u3002" }),
-      facts.reportedEvidence.map((item, index) => /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("p", { children: item.detail }, index)),
-      /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("h3", { children: "\u81EA\u52A8\u68C0\u67E5\u4E0E\u4EBA\u5DE5\u53CD\u9988" }),
-      /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("p", { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("ul", { children: facts.changes.paths.map((file) => /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("li", { className: "gw-path", children: file }, file)) }),
+      /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("h3", { children: "\u6267\u884C\u8005\u63D0\u4EA4\u7684\u8BC1\u636E" }),
+      /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("p", { className: "gw-small gw-muted", children: "\u4EE5\u4E0B\u4E3A\u6267\u884C\u8005\u8BB0\u5F55\uFF0C\u4E0D\u81EA\u52A8\u89C6\u4E3A\u72EC\u7ACB\u9A8C\u8BC1\u3002" }),
+      facts.reportedEvidence.map((item, index) => /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("p", { children: item.detail }, index)),
+      /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("h3", { children: "\u81EA\u52A8\u68C0\u67E5\u4E0E\u4EBA\u5DE5\u53CD\u9988" }),
+      /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("p", { children: [
         "\u5F15\u64CE\u5BFC\u5165\uFF1A",
         facts.diagnosis?.coverage.engineImport === "passed" ? "\u901A\u8FC7" : "\u672A\u901A\u8FC7\u6216\u672A\u6267\u884C",
         "\uFF1B\u4EBA\u5DE5\u53CD\u9988\uFF1A",
         facts.humanReview ? facts.humanReview.accepted ? "\u901A\u8FC7" : "\u9000\u56DE" : "\u5C1A\u65E0"
       ] }),
-      facts.automaticCheck?.message && /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("p", { children: facts.automaticCheck.message }),
-      facts.humanReview && /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("p", { children: facts.humanReview.statement }),
-      /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("ul", { children: facts.diagnosis?.issues.map((issue) => /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("li", { children: issue.title }, issue.id)) }),
-      /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("p", { className: "gw-small gw-muted", children: "\u8FD9\u662F\u5F53\u65F6\u7684\u8BB0\u5F55\uFF0C\u4E0D\u4EE3\u8868\u5F53\u524D\u5DE5\u7A0B\u4ECD\u7136\u901A\u8FC7\u3002\u540E\u7EED\u4FEE\u6539\u9700\u8981\u91CD\u65B0\u9A8C\u8BC1\u3002" })
+      facts.automaticCheck?.message && /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("p", { children: facts.automaticCheck.message }),
+      facts.humanReview && /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("p", { children: facts.humanReview.statement }),
+      /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("ul", { children: facts.diagnosis?.issues.map((issue) => /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("li", { children: issue.title }, issue.id)) }),
+      /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("p", { className: "gw-small gw-muted", children: "\u8FD9\u662F\u5F53\u65F6\u7684\u8BB0\u5F55\uFF0C\u4E0D\u4EE3\u8868\u5F53\u524D\u5DE5\u7A0B\u4ECD\u7136\u901A\u8FC7\u3002\u540E\u7EED\u4FEE\u6539\u9700\u8981\u91CD\u65B0\u9A8C\u8BC1\u3002" })
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("details", { children: [
-      /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("summary", { children: [
+    /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("details", { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("summary", { children: [
         "\u96BE\u70B9\u3001\u5C1D\u8BD5\u8DEF\u7EBF\u4E0E\u590D\u76D8\u8865\u5145\uFF08",
         report.notes.length,
         "\uFF09"
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("p", { className: "gw-small gw-muted", children: "\u5C1A\u672A\u8BC1\u5B9E\u7684\u6839\u56E0\u8BF7\u660E\u786E\u5199\u201C\u5047\u8BBE\u201D\u3002\u7ECF\u9A8C\u7559\u5728\u672C\u9879\u76EE\uFF0C\u4E0D\u4F1A\u81EA\u52A8\u6210\u4E3A\u901A\u7528\u77E5\u8BC6\u3002" }),
-      report.notes.map((item) => /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { children: [
-        /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("p", { className: "gw-small", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("p", { className: "gw-small gw-muted", children: "\u5C1A\u672A\u8BC1\u5B9E\u7684\u6839\u56E0\u8BF7\u660E\u786E\u5199\u201C\u5047\u8BBE\u201D\u3002\u7ECF\u9A8C\u7559\u5728\u672C\u9879\u76EE\uFF0C\u4E0D\u4F1A\u81EA\u52A8\u6210\u4E3A\u901A\u7528\u77E5\u8BC6\u3002" }),
+      report.notes.map((item) => /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("p", { className: "gw-small", children: [
           new Date(item.at).toLocaleString("zh-CN"),
           " \xB7 \u7528\u6237\u8865\u5145"
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("p", { children: item.text })
+        /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("p", { children: item.text })
       ] }, item.id)),
-      /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("label", { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("label", { children: [
         "\u8865\u5145\u6216\u66F4\u6B63",
-        /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("textarea", { "aria-label": `\u590D\u76D8\u8865\u5145\uFF1A${facts.title}`, rows: 4, maxLength: 12e3, value: note, onChange: (e42) => setNote(e42.target.value), placeholder: "\u5361\u5728\u54EA\u91CC\u3001\u8BD5\u8FC7\u4EC0\u4E48\u3001\u7ED3\u679C\u5982\u4F55\u3001\u54EA\u4E9B\u539F\u56E0\u5DF2\u8BC1\u5B9E\u3001\u4E0B\u4E00\u6B65\u600E\u4E48\u9A8C\u8BC1" })
+        /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("textarea", { "aria-label": `\u590D\u76D8\u8865\u5145\uFF1A${facts.title}`, rows: 4, maxLength: 12e3, value: note, onChange: (e42) => setNote(e42.target.value), placeholder: "\u5361\u5728\u54EA\u91CC\u3001\u8BD5\u8FC7\u4EC0\u4E48\u3001\u7ED3\u679C\u5982\u4F55\u3001\u54EA\u4E9B\u539F\u56E0\u5DF2\u8BC1\u5B9E\u3001\u4E0B\u4E00\u6B65\u600E\u4E48\u9A8C\u8BC1" })
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("button", { className: "gw-secondary", disabled: busy2 || !note.trim(), onClick: async () => {
+      /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("button", { className: "gw-secondary", disabled: busy2 || !note.trim(), onClick: async () => {
         if (await onNote(report, note)) setNote("");
       }, children: "\u4FDD\u5B58\u8865\u5145\uFF0C\u4FDD\u7559\u539F\u8BB0\u5F55" })
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("details", { children: [
-      /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("summary", { children: [
+    /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("details", { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("summary", { children: [
         "\u5386\u53F2\u8BB0\u5F55\uFF08",
         report.history.length,
         "\uFF09"
       ] }),
-      report.history.map((item, index) => /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { children: [
-        /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("p", { children: [
+      report.history.map((item, index) => /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("p", { children: [
           "\u7248\u672C ",
           item.revision,
           " \xB7 ",
           statuses[item.facts.status] ?? item.facts.status
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("p", { children: item.facts.reportedSummary || "\u6682\u65E0\u7ED3\u679C\u8BF4\u660E" })
+        /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("p", { children: item.facts.reportedSummary || "\u6682\u65E0\u7ED3\u679C\u8BF4\u660E" })
       ] }, index))
     ] })
   ] });
 }
 function DevelopmentReports({ api, canChat = false, onSent }) {
-  const [data, setData] = (0, import_react16.useState)(null);
-  const [error, setError] = (0, import_react16.useState)("");
-  const [busy2, setBusy] = (0, import_react16.useState)(false);
-  const [limit, setLimit] = (0, import_react16.useState)(20);
+  const [data, setData] = (0, import_react17.useState)(null);
+  const [error, setError] = (0, import_react17.useState)("");
+  const [busy2, setBusy] = (0, import_react17.useState)(false);
+  const [limit, setLimit] = (0, import_react17.useState)(20);
   async function refresh() {
     setBusy(true);
     setError("");
@@ -3060,7 +3250,7 @@ function DevelopmentReports({ api, canChat = false, onSent }) {
       setBusy(false);
     }
   }
-  (0, import_react16.useEffect)(() => {
+  (0, import_react17.useEffect)(() => {
     let current = true;
     api.call("developmentReports").then((value) => {
       if (current) setData(value);
@@ -3109,61 +3299,61 @@ function DevelopmentReports({ api, canChat = false, onSent }) {
       setBusy(false);
     }
   }
-  return /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "gw-section-page", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("div", { className: "gw-overview-heading", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("h2", { children: "\u5F00\u53D1\u8BB0\u5F55\u4E0E\u590D\u76D8" }),
-      /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("button", { className: "gw-secondary", disabled: busy2, onClick: refresh, children: "\u5237\u65B0\u62A5\u544A" })
+  return /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "gw-section-page", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "gw-overview-heading", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("h2", { children: "\u5F00\u53D1\u8BB0\u5F55\u4E0E\u590D\u76D8" }),
+      /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("button", { className: "gw-secondary", disabled: busy2, onClick: refresh, children: "\u5237\u65B0\u62A5\u544A" })
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("p", { className: "gw-muted", children: "\u6BCF\u6B21\u5F00\u53D1\u63D0\u4EA4\u3001\u5931\u8D25\u6216\u4E2D\u65AD\u5F62\u6210\u4E00\u4EFD\u6267\u884C\u8BB0\u5F55\u3002\u63D0\u4EA4\u4E0D\u7B49\u4E8E\u9636\u6BB5\u5B8C\u6210\uFF0C\u9A8C\u6536\u4E0E\u5931\u8D25\u5386\u53F2\u5206\u522B\u4FDD\u7559\u3002" }),
-    error && /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("p", { role: "alert", className: "gw-settings-error", children: error }),
-    /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("details", { children: [
-      /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("summary", { children: "\u5BA1\u6838\u9879\u76EE\u7ECF\u9A8C\u5019\u9009" }),
-      /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(ProjectLessons, { api }, data?.reports?.map((report) => report.revision).join(":") ?? "loading")
+    /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("p", { className: "gw-muted", children: "\u6BCF\u6B21\u5F00\u53D1\u63D0\u4EA4\u3001\u5931\u8D25\u6216\u4E2D\u65AD\u5F62\u6210\u4E00\u4EFD\u6267\u884C\u8BB0\u5F55\u3002\u63D0\u4EA4\u4E0D\u7B49\u4E8E\u9636\u6BB5\u5B8C\u6210\uFF0C\u9A8C\u6536\u4E0E\u5931\u8D25\u5386\u53F2\u5206\u522B\u4FDD\u7559\u3002" }),
+    error && /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("p", { role: "alert", className: "gw-settings-error", children: error }),
+    /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("details", { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("summary", { children: "\u5BA1\u6838\u9879\u76EE\u7ECF\u9A8C\u5019\u9009" }),
+      /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(ProjectLessons, { api }, data?.reports?.map((report) => report.revision).join(":") ?? "loading")
     ] }),
-    data?.milestones?.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("section", { "aria-label": "\u6309\u9879\u76EE\u9636\u6BB5\u590D\u76D8", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("h2", { children: "\u9879\u76EE\u9636\u6BB5" }),
-      data.milestones.map((stage) => /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("details", { className: "gw-report-disclosure", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("summary", { children: [
-          /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("strong", { children: stage.title }),
-          /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("span", { children: [
+    data?.milestones?.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("section", { "aria-label": "\u6309\u9879\u76EE\u9636\u6BB5\u590D\u76D8", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("h2", { children: "\u9879\u76EE\u9636\u6BB5" }),
+      data.milestones.map((stage) => /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("details", { className: "gw-report-disclosure", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("summary", { children: [
+          /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("strong", { children: stage.title }),
+          /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("span", { children: [
             stage.current ? "\u5F53\u524D\u65B9\u6848" : "\u5386\u53F2\u65B9\u6848",
             " \xB7 ",
             stage.executionCount,
             " \u6B21\u5F00\u53D1\u8BB0\u5F55"
           ] })
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(StageSummary, { stage, onAnalyze: analyzeStage, canChat, busy: busy2 })
+        /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(StageSummary, { stage, onAnalyze: analyzeStage, canChat, busy: busy2 })
       ] }, stage.reportId))
     ] }),
-    data?.stages?.filter((stage) => stage.current).map((stage) => /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(StageSummary, { stage, onAnalyze: analyzeStage, canChat, busy: busy2 }, stage.planHash)),
-    data?.stages?.some((stage) => !stage.current) && /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("details", { children: [
-      /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("summary", { children: "\u67E5\u770B\u5386\u53F2\u65B9\u6848\u6C47\u603B" }),
-      data.stages.filter((stage) => !stage.current).map((stage) => /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(StageSummary, { stage, onAnalyze: analyzeStage, canChat, busy: busy2 }, stage.planHash))
+    data?.stages?.filter((stage) => stage.current).map((stage) => /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(StageSummary, { stage, onAnalyze: analyzeStage, canChat, busy: busy2 }, stage.planHash)),
+    data?.stages?.some((stage) => !stage.current) && /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("details", { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("summary", { children: "\u67E5\u770B\u5386\u53F2\u65B9\u6848\u6C47\u603B" }),
+      data.stages.filter((stage) => !stage.current).map((stage) => /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(StageSummary, { stage, onAnalyze: analyzeStage, canChat, busy: busy2 }, stage.planHash))
     ] }),
-    !data ? /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("p", { children: "\u6B63\u5728\u8BFB\u53D6\u5F00\u53D1\u62A5\u544A\u2026" }) : !data.reports.length ? /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("p", { className: "gw-empty", children: "\u8FD8\u6CA1\u6709\u5F00\u53D1\u62A5\u544A\u3002\u901A\u8FC7\u5DE5\u4F5C\u53F0\u63D0\u4EA4\u6216\u7ED3\u675F\u4E0B\u4E00\u6B21\u5F00\u53D1\u4EFB\u52A1\u540E\uFF0C\u4F1A\u81EA\u52A8\u7559\u6863\u3002" }) : /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("section", { "aria-label": "\u5F00\u53D1\u6279\u6B21\u8BB0\u5F55", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("h2", { children: [
+    !data ? /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("p", { children: "\u6B63\u5728\u8BFB\u53D6\u5F00\u53D1\u62A5\u544A\u2026" }) : !data.reports.length ? /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("p", { className: "gw-empty", children: "\u8FD8\u6CA1\u6709\u5F00\u53D1\u62A5\u544A\u3002\u901A\u8FC7\u5DE5\u4F5C\u53F0\u63D0\u4EA4\u6216\u7ED3\u675F\u4E0B\u4E00\u6B21\u5F00\u53D1\u4EFB\u52A1\u540E\uFF0C\u4F1A\u81EA\u52A8\u7559\u6863\u3002" }) : /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("section", { "aria-label": "\u5F00\u53D1\u6279\u6B21\u8BB0\u5F55", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("h2", { children: [
         "\u5F00\u53D1\u8BB0\u5F55\uFF08",
         data.reports.length,
         "\uFF09"
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("p", { className: "gw-small gw-muted", children: "\u5C55\u5F00\u4E00\u6279\uFF0C\u67E5\u770B\u53D8\u66F4\u3001\u9A8C\u8BC1\u548C\u590D\u76D8\uFF0C\u6216\u8865\u5145\u8BB0\u5F55\u3002" }),
-      [...data.reports].reverse().slice(0, limit).map((report) => /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("details", { className: "gw-report-disclosure", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("summary", { children: [
-          /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("strong", { children: report.facts.title }),
-          /* @__PURE__ */ (0, import_jsx_runtime12.jsxs)("span", { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("p", { className: "gw-small gw-muted", children: "\u5C55\u5F00\u4E00\u6279\uFF0C\u67E5\u770B\u53D8\u66F4\u3001\u9A8C\u8BC1\u548C\u590D\u76D8\uFF0C\u6216\u8865\u5145\u8BB0\u5F55\u3002" }),
+      [...data.reports].reverse().slice(0, limit).map((report) => /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("details", { className: "gw-report-disclosure", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("summary", { children: [
+          /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("strong", { children: report.facts.title }),
+          /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("span", { children: [
             statuses[report.facts.status] ?? report.facts.status,
             report.analysisStale ? " \xB7 \u5206\u6790\u9700\u66F4\u65B0" : ""
           ] })
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime12.jsx)(ReportCard, { report, onNote: note, onAnalyze: analyze, canChat, busy: busy2 })
+        /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(ReportCard, { report, onNote: note, onAnalyze: analyze, canChat, busy: busy2 })
       ] }, report.id)),
-      data.reports.length > limit && /* @__PURE__ */ (0, import_jsx_runtime12.jsx)("button", { className: "gw-secondary", onClick: () => setLimit(limit + 20), children: "\u67E5\u770B\u66F4\u591A\u62A5\u544A" })
+      data.reports.length > limit && /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("button", { className: "gw-secondary", onClick: () => setLimit(limit + 20), children: "\u67E5\u770B\u66F4\u591A\u62A5\u544A" })
     ] })
   ] });
 }
 
 // src/ProducerDiagnosis.jsx
-var import_react17 = __toESM(require("react"), 1);
+var import_react18 = __toESM(require("react"), 1);
 
 // src/diagnosis-groups.mjs
 var diagnosisModules = [
@@ -3233,7 +3423,7 @@ function diagnosisCopy(issue) {
 }
 
 // src/ProducerDiagnosis.jsx
-var import_jsx_runtime13 = require("react/jsx-runtime");
+var import_jsx_runtime14 = require("react/jsx-runtime");
 var actionNames = { design: "\u8BA8\u8BBA\u8BBE\u8BA1\u65B9\u6848", production: "\u8BA8\u8BBA\u8BA1\u5212\u8C03\u6574", engineering: "\u8BF7\u6C42\u5C40\u90E8\u4FEE\u590D", verification: "\u8865\u5145\u9A8C\u8BC1\u8BA1\u5212" };
 function ProducerDiagnosis({ report, busy: busy2, sent, canChat, onSuggest, onExplain, onRecheck }) {
   const grouped = groupDiagnosis(report);
@@ -3245,56 +3435,56 @@ function ProducerDiagnosis({ report, busy: busy2, sent, canChat, onSuggest, onEx
     return actionNames[issue.module] ?? "\u8BA8\u8BBA\u8FD9\u6761\u5EFA\u8BAE";
   }
   function Issue({ issue }) {
-    return /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("article", { className: "gw-issue", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("div", { className: "gw-eyebrow", children: issue.code ? "\u81EA\u52A8\u68C0\u67E5" : "AI \u8BC4\u5BA1" }),
-      /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(Focus, { issue }),
-      /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("details", { children: [
-        /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("summary", { children: "\u67E5\u770B\u4F9D\u636E" }),
-        /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("pre", { children: JSON.stringify(issue.evidence ?? [], null, 2) })
+    return /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("article", { className: "gw-issue", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("div", { className: "gw-eyebrow", children: issue.code ? "\u81EA\u52A8\u68C0\u67E5" : "AI \u8BC4\u5BA1" }),
+      /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(Focus, { issue }),
+      /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("details", { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("summary", { children: "\u67E5\u770B\u4F9D\u636E" }),
+        /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("pre", { children: JSON.stringify(issue.evidence ?? [], null, 2) })
       ] })
     ] });
   }
   function Focus({ issue }) {
     const copy = diagnosisCopy(issue);
-    return /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { children: [
-      /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("h3", { children: copy.summary }),
-      /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("p", { className: "gw-small gw-muted", children: certainty(issue) }),
-      /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("p", { children: [
+    return /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("h3", { children: copy.summary }),
+      /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("p", { className: "gw-small gw-muted", children: certainty(issue) }),
+      /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("p", { children: [
         "\u4E0B\u4E00\u6B65\uFF1A",
         copy.nextStep
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("details", { children: [
-        /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("summary", { children: "\u4E3A\u4EC0\u4E48\u8981\u5904\u7406" }),
-        /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("p", { children: copy.impact })
+      /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("details", { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("summary", { children: "\u4E3A\u4EC0\u4E48\u8981\u5904\u7406" }),
+        /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("p", { children: copy.impact })
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("details", { children: [
-        /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("summary", { children: "\u67E5\u770B\u539F\u59CB\u5224\u65AD\u4E0E\u6280\u672F\u5EFA\u8BAE" }),
-        /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("p", { children: issue.title }),
-        /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("p", { children: issue.explanation }),
-        /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("p", { children: issue.suggestion })
+      /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("details", { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("summary", { children: "\u67E5\u770B\u539F\u59CB\u5224\u65AD\u4E0E\u6280\u672F\u5EFA\u8BAE" }),
+        /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("p", { children: issue.title }),
+        /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("p", { children: issue.explanation }),
+        /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("p", { children: issue.suggestion })
       ] }),
-      copy.needsExplanation ? /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("button", { className: "gw-primary", disabled: busy2 || report.stale || sent.has(`explain:${report.id}:${issue.id}`), onClick: () => onExplain(issue.id), children: sent.has(`explain:${report.id}:${issue.id}`) ? "\u89E3\u8BFB\u8BF7\u6C42\u5DF2\u53D1\u9001" : canChat ? "\u8BF7 AI \u7528\u767D\u8BDD\u89E3\u91CA" : "\u67E5\u770B\u89E3\u8BFB\u8BF7\u6C42" }) : /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("button", { className: "gw-primary", disabled: busy2 || sent.has(`${report.id}:${issue.id}`) || report.stale, onClick: () => onSuggest(issue.id), children: actionLabel(issue) })
+      copy.needsExplanation ? /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("button", { className: "gw-primary", disabled: busy2 || report.stale || sent.has(`explain:${report.id}:${issue.id}`), onClick: () => onExplain(issue.id), children: sent.has(`explain:${report.id}:${issue.id}`) ? "\u89E3\u8BFB\u8BF7\u6C42\u5DF2\u53D1\u9001" : canChat ? "\u8BF7 AI \u7528\u767D\u8BDD\u89E3\u91CA" : "\u67E5\u770B\u89E3\u8BFB\u8BF7\u6C42" }) : /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("button", { className: "gw-primary", disabled: busy2 || sent.has(`${report.id}:${issue.id}`) || report.stale, onClick: () => onSuggest(issue.id), children: actionLabel(issue) })
     ] });
   }
-  return /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("div", { className: "gw-producer-diagnosis", children: [
-    report.stale ? /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("section", { "aria-label": "\u4F18\u5148\u884C\u52A8", className: "gw-diagnosis-priorities gw-stale-priority", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("h2", { children: "\u5148\u66F4\u65B0\u68C0\u67E5\u7ED3\u679C" }),
-      /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("p", { children: "\u5DE5\u7A0B\u6216\u8BA1\u5212\u5DF2\u53D8\u5316\uFF0C\u65E7\u7ED3\u679C\u4E0D\u80FD\u7528\u4E8E\u5224\u65AD\u5F53\u524D\u7248\u672C\u3002" }),
-      /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("button", { className: "gw-primary", disabled: busy2 || !onRecheck, onClick: onRecheck, children: "\u91CD\u65B0\u68C0\u67E5" })
-    ] }) : /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("section", { "aria-label": "\u4F18\u5148\u884C\u52A8", className: "gw-diagnosis-priorities", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("h2", { children: "\u73B0\u5728\u5148\u505A\u8FD9\u4E00\u4EF6" }),
-      !grouped.priority.length ? /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("p", { children: "\u6682\u672A\u53D1\u73B0\u5177\u4F53\u95EE\u9898\uFF0C\u63A5\u4E0B\u6765\u5B9E\u9645\u8BD5\u73A9\u3002\u68C0\u67E5\u901A\u8FC7\u4E0D\u4EE3\u8868\u6E38\u620F\u597D\u73A9\u3002" }) : grouped.priority.slice(0, 1).map((issue) => /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(Focus, { issue }, issue.id)),
-      grouped.priority.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("p", { className: "gw-small gw-muted gw-action-destination", children: canChat ? "\u5EFA\u8BAE\u4F1A\u53D1\u9001\u5230\u5F53\u524D\u9879\u76EE\u5BF9\u8BDD\u3002" : "\u5148\u67E5\u770B\u5EFA\u8BAE\uFF0C\u8FDE\u63A5\u5BF9\u8BDD\u540E\u518D\u53D1\u9001\u3002" })
+  return /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { className: "gw-producer-diagnosis", children: [
+    report.stale ? /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("section", { "aria-label": "\u4F18\u5148\u884C\u52A8", className: "gw-diagnosis-priorities gw-stale-priority", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("h2", { children: "\u5148\u66F4\u65B0\u68C0\u67E5\u7ED3\u679C" }),
+      /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("p", { children: "\u5DE5\u7A0B\u6216\u8BA1\u5212\u5DF2\u53D8\u5316\uFF0C\u65E7\u7ED3\u679C\u4E0D\u80FD\u7528\u4E8E\u5224\u65AD\u5F53\u524D\u7248\u672C\u3002" }),
+      /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("button", { className: "gw-primary", disabled: busy2 || !onRecheck, onClick: onRecheck, children: "\u91CD\u65B0\u68C0\u67E5" })
+    ] }) : /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("section", { "aria-label": "\u4F18\u5148\u884C\u52A8", className: "gw-diagnosis-priorities", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("h2", { children: "\u73B0\u5728\u5148\u505A\u8FD9\u4E00\u4EF6" }),
+      !grouped.priority.length ? /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("p", { children: "\u6682\u672A\u53D1\u73B0\u5177\u4F53\u95EE\u9898\uFF0C\u63A5\u4E0B\u6765\u5B9E\u9645\u8BD5\u73A9\u3002\u68C0\u67E5\u901A\u8FC7\u4E0D\u4EE3\u8868\u6E38\u620F\u597D\u73A9\u3002" }) : grouped.priority.slice(0, 1).map((issue) => /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(Focus, { issue }, issue.id)),
+      grouped.priority.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("p", { className: "gw-small gw-muted gw-action-destination", children: canChat ? "\u5EFA\u8BAE\u4F1A\u53D1\u9001\u5230\u5F53\u524D\u9879\u76EE\u5BF9\u8BDD\u3002" : "\u5148\u67E5\u770B\u5EFA\u8BAE\uFF0C\u8FDE\u63A5\u5BF9\u8BDD\u540E\u518D\u53D1\u9001\u3002" })
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("details", { className: "gw-diagnosis-details", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("summary", { children: "\u67E5\u770B\u5168\u90E8\u8BC4\u4F30 \xB7 \u73A9\u6CD5\u3001\u8FDB\u5EA6\u3001\u5F00\u53D1\u3001\u4EA4\u4ED8" }),
-      /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("div", { className: "gw-diagnosis-modules", children: grouped.modules.map((module2) => /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("section", { className: "gw-diagnosis-module", "aria-label": module2.title, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("header", { children: [
-          /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("h2", { children: module2.title }),
-          /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("span", { children: report.stale ? "\u9700\u91CD\u68C0" : module2.issues.some((i) => i.severity === "blocking") ? "\u4F18\u5148\u5904\u7406" : module2.issues.length ? "\u9700\u8981\u5173\u6CE8" : "\u5F85\u6838\u5B9E" })
+    /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("details", { className: "gw-diagnosis-details", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("summary", { children: "\u67E5\u770B\u5168\u90E8\u8BC4\u4F30 \xB7 \u73A9\u6CD5\u3001\u8FDB\u5EA6\u3001\u5F00\u53D1\u3001\u4EA4\u4ED8" }),
+      /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("div", { className: "gw-diagnosis-modules", children: grouped.modules.map((module2) => /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("section", { className: "gw-diagnosis-module", "aria-label": module2.title, children: [
+        /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("header", { children: [
+          /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("h2", { children: module2.title }),
+          /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("span", { children: report.stale ? "\u9700\u91CD\u68C0" : module2.issues.some((i) => i.severity === "blocking") ? "\u4F18\u5148\u5904\u7406" : module2.issues.length ? "\u9700\u8981\u5173\u6CE8" : "\u5F85\u6838\u5B9E" })
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("p", { className: "gw-small gw-muted", children: module2.pending }),
-        module2.id === "production" && report.producerFacts && /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("p", { className: "gw-small", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("p", { className: "gw-small gw-muted", children: module2.pending }),
+        module2.id === "production" && report.producerFacts && /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("p", { className: "gw-small", children: [
           "\u5F53\u524D\u8303\u56F4 ",
           report.producerFacts.scopeItems,
           " \u9879 \xB7 \u672C\u65B9\u6848\u4EFB\u52A1 ",
@@ -3303,40 +3493,40 @@ function ProducerDiagnosis({ report, busy: busy2, sent, canChat, onSuggest, onEx
           report.producerFacts.tasks.awaitingReview,
           " \u9879"
         ] }),
-        module2.id === "engineering" && /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("p", { className: "gw-small", children: [
+        module2.id === "engineering" && /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("p", { className: "gw-small", children: [
           "Godot \u5BFC\u5165\uFF1A",
           report.coverage.engineImport === "passed" ? "\u901A\u8FC7" : report.coverage.engineImport === "not-run" ? "\u672A\u6267\u884C" : "\u672A\u901A\u8FC7\u6216\u672A\u5B8C\u6210"
         ] }),
-        module2.id === "verification" && /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("p", { className: "gw-small", children: [
+        module2.id === "verification" && /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("p", { className: "gw-small", children: [
           "\u4EBA\u5DE5\u8BD5\u73A9\uFF1A",
           report.coverage.humanPlaytest === "not-run" ? "\u672A\u6267\u884C" : "\u8BF7\u6838\u5BF9\u72EC\u7ACB\u8BB0\u5F55"
         ] }),
-        module2.issues.length ? /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)(import_jsx_runtime13.Fragment, { children: [
-          /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("ul", { children: module2.issues.slice(0, 2).map((issue) => /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("li", { children: diagnosisCopy(issue).summary }, issue.id)) }),
-          /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("details", { children: [
-            /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("summary", { children: [
+        module2.issues.length ? /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)(import_jsx_runtime14.Fragment, { children: [
+          /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("ul", { children: module2.issues.slice(0, 2).map((issue) => /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("li", { children: diagnosisCopy(issue).summary }, issue.id)) }),
+          /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("details", { children: [
+            /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("summary", { children: [
               "\u67E5\u770B\u672C\u6A21\u5757 ",
               module2.issues.length,
               " \u9879\u8BC4\u4F30\u4E0E\u5EFA\u8BAE"
             ] }),
-            module2.issues.map((issue) => /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(Issue, { issue }, issue.id))
+            module2.issues.map((issue) => /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(Issue, { issue }, issue.id))
           ] })
-        ] }) : /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("p", { className: "gw-small", children: "\u5C1A\u65E0\u5177\u4F53\u8BC4\u5BA1\u7ED3\u8BBA\uFF0C\u4E0D\u8868\u793A\u672C\u6A21\u5757\u5DF2\u901A\u8FC7\u3002" })
+        ] }) : /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("p", { className: "gw-small", children: "\u5C1A\u65E0\u5177\u4F53\u8BC4\u5BA1\u7ED3\u8BBA\uFF0C\u4E0D\u8868\u793A\u672C\u6A21\u5757\u5DF2\u901A\u8FC7\u3002" })
       ] }, module2.id)) }),
-      grouped.unclassified.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("details", { children: [
-        /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("summary", { children: [
+      grouped.unclassified.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("details", { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("summary", { children: [
           "\u672A\u5206\u7EC4\u7684\u5386\u53F2\u5EFA\u8BAE\uFF08",
           grouped.unclassified.length,
           "\uFF09"
         ] }),
-        grouped.unclassified.map((issue) => /* @__PURE__ */ (0, import_jsx_runtime13.jsx)(Issue, { issue }, issue.id))
+        grouped.unclassified.map((issue) => /* @__PURE__ */ (0, import_jsx_runtime14.jsx)(Issue, { issue }, issue.id))
       ] })
     ] })
   ] });
 }
 
 // src/EngineInstaller.jsx
-var import_react18 = __toESM(require("react"), 1);
+var import_react19 = __toESM(require("react"), 1);
 
 // src/engine-install-memory.mjs
 var prefix3 = "godot-workbench:engine-install:";
@@ -3369,21 +3559,21 @@ function unresolvedInstall(memory) {
 }
 
 // src/EngineInstaller.jsx
-var import_jsx_runtime14 = require("react/jsx-runtime");
-var phases = { "checking-release": "\u6838\u5BF9\u5B98\u65B9\u7248\u672C", downloading: "\u4E0B\u8F7D\u5B89\u88C5\u5305", verified: "\u5B89\u88C5\u5305\u6821\u9A8C\u901A\u8FC7", extracting: "\u89E3\u538B\u5B89\u88C5\u5305", "verifying-engine": "\u68C0\u67E5\u5F15\u64CE\u7248\u672C", installing: "\u5199\u5165\u5F15\u64CE\u6587\u4EF6", installed: "\u5B89\u88C5\u5B8C\u6210" };
+var import_jsx_runtime15 = require("react/jsx-runtime");
+var phases2 = { "checking-release": "\u6838\u5BF9\u5B98\u65B9\u7248\u672C", downloading: "\u4E0B\u8F7D\u5B89\u88C5\u5305", verified: "\u5B89\u88C5\u5305\u6821\u9A8C\u901A\u8FC7", extracting: "\u89E3\u538B\u5B89\u88C5\u5305", "verifying-engine": "\u68C0\u67E5\u5F15\u64CE\u7248\u672C", installing: "\u5199\u5165\u5F15\u64CE\u6587\u4EF6", installed: "\u5B89\u88C5\u5B8C\u6210" };
 var isActive = (job) => ["running", "cancelling"].includes(job?.status);
 function EngineInstaller({ api, projectRoot, disabled, onUse }) {
-  const [open, setOpen] = (0, import_react18.useState)(false);
-  const [version, setVersion] = (0, import_react18.useState)("");
-  const [offer, setOffer] = (0, import_react18.useState)(null);
-  const [destination, setDestination] = (0, import_react18.useState)("");
-  const [confirmed, setConfirmed] = (0, import_react18.useState)(false);
-  const [job, setJob] = (0, import_react18.useState)(null);
-  const [busy2, setBusy] = (0, import_react18.useState)(false);
-  const [error, setError] = (0, import_react18.useState)("");
-  const [inspection, setInspection] = (0, import_react18.useState)(null);
+  const [open, setOpen] = (0, import_react19.useState)(false);
+  const [version, setVersion] = (0, import_react19.useState)("");
+  const [offer, setOffer] = (0, import_react19.useState)(null);
+  const [destination, setDestination] = (0, import_react19.useState)("");
+  const [confirmed, setConfirmed] = (0, import_react19.useState)(false);
+  const [job, setJob] = (0, import_react19.useState)(null);
+  const [busy2, setBusy] = (0, import_react19.useState)(false);
+  const [error, setError] = (0, import_react19.useState)("");
+  const [inspection, setInspection] = (0, import_react19.useState)(null);
   const active = isActive(job);
-  (0, import_react18.useEffect)(() => {
+  (0, import_react19.useEffect)(() => {
     let mounted = true;
     const remembered = readInstallMemory(installMemoryStorage(), projectRoot);
     api.call("engineInstallStatus").then((value) => {
@@ -3408,10 +3598,10 @@ function EngineInstaller({ api, projectRoot, disabled, onUse }) {
       mounted = false;
     };
   }, [api, projectRoot]);
-  (0, import_react18.useEffect)(() => {
+  (0, import_react19.useEffect)(() => {
     rememberInstall(installMemoryStorage(), projectRoot, job);
   }, [projectRoot, job]);
-  (0, import_react18.useEffect)(() => {
+  (0, import_react19.useEffect)(() => {
     if (!active || !job?.id) return;
     let mounted = true;
     let timer;
@@ -3486,24 +3676,24 @@ function EngineInstaller({ api, projectRoot, disabled, onUse }) {
       setBusy(false);
     }
   }
-  return /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("section", { className: "gw-engine-installer", "aria-label": "\u4E0B\u8F7D\u5B89\u88C5 Godot", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("button", { type: "button", className: "gw-secondary", onClick: () => setOpen(!open), "aria-expanded": open, children: open ? "\u6536\u8D77\u4E0B\u8F7D\u9009\u9879" : "\u6CA1\u6709 Godot\uFF1F\u5E2E\u52A9\u4E0B\u8F7D\u5B89\u88C5" }),
-    open && /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { className: "gw-engine-install-content", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("p", { className: "gw-small gw-muted", children: "Windows x64 \u6807\u51C6\u7248\uFF0C\u9002\u5408 GDScript\uFF1B\u4E0D\u5305\u542B C# \u6216\u5BFC\u51FA\u6A21\u677F\u3002\u4E5F\u53EF\u4EE5\u76F4\u63A5\u5728\u4E0A\u65B9\u9009\u62E9\u5DF2\u6709\u5F15\u64CE\u3002" }),
-      !active && /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)(import_jsx_runtime14.Fragment, { children: [
-        /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("label", { children: [
+  return /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("section", { className: "gw-engine-installer", "aria-label": "\u4E0B\u8F7D\u5B89\u88C5 Godot", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("button", { type: "button", className: "gw-secondary", onClick: () => setOpen(!open), "aria-expanded": open, children: open ? "\u6536\u8D77\u4E0B\u8F7D\u9009\u9879" : "\u6CA1\u6709 Godot\uFF1F\u5E2E\u52A9\u4E0B\u8F7D\u5B89\u88C5" }),
+    open && /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { className: "gw-engine-install-content", children: [
+      /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("p", { className: "gw-small gw-muted", children: "Windows x64 \u6807\u51C6\u7248\uFF0C\u9002\u5408 GDScript\uFF1B\u4E0D\u5305\u542B C# \u6216\u5BFC\u51FA\u6A21\u677F\u3002\u4E5F\u53EF\u4EE5\u76F4\u63A5\u5728\u4E0A\u65B9\u9009\u62E9\u5DF2\u6709\u5F15\u64CE\u3002" }),
+      !active && /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)(import_jsx_runtime15.Fragment, { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("label", { children: [
           "\u6307\u5B9A\u7A33\u5B9A\u7248\uFF08\u53EF\u9009\uFF09",
-          /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("input", { "aria-label": "Godot \u4E0B\u8F7D\u7248\u672C", value: version, disabled: busy2 || disabled, placeholder: "\u7559\u7A7A\u67E5\u8BE2\u6700\u65B0\u7A33\u5B9A\u7248\uFF0C\u4F8B\u5982 4.7.2-stable", onChange: (e42) => {
+          /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("input", { "aria-label": "Godot \u4E0B\u8F7D\u7248\u672C", value: version, disabled: busy2 || disabled, placeholder: "\u7559\u7A7A\u67E5\u8BE2\u6700\u65B0\u7A33\u5B9A\u7248\uFF0C\u4F8B\u5982 4.7.2-stable", onChange: (e42) => {
             setVersion(e42.target.value);
             setOffer(null);
             setConfirmed(false);
           } })
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("button", { type: "button", className: "gw-secondary", onClick: query, disabled: busy2 || disabled, children: "\u67E5\u8BE2\u5B98\u65B9\u7248\u672C" })
+        /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("button", { type: "button", className: "gw-secondary", onClick: query, disabled: busy2 || disabled, children: "\u67E5\u8BE2\u5B98\u65B9\u7248\u672C" })
       ] }),
-      offer && !active && /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)(import_jsx_runtime14.Fragment, { children: [
-        /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("p", { children: [
-          /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("strong", { children: [
+      offer && !active && /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)(import_jsx_runtime15.Fragment, { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("p", { children: [
+          /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("strong", { children: [
             "Godot ",
             offer.version
           ] }),
@@ -3511,195 +3701,52 @@ function EngineInstaller({ api, projectRoot, disabled, onUse }) {
           (offer.bytes / 1024 / 1024).toFixed(1),
           " MB \xB7 Windows x64"
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("p", { className: "gw-small", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("a", { href: offer.releaseUrl, target: "_blank", rel: "noreferrer", children: "\u67E5\u770B\u5B98\u65B9\u53D1\u5E03\u9875" }),
+        /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("p", { className: "gw-small", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("a", { href: offer.releaseUrl, target: "_blank", rel: "noreferrer", children: "\u67E5\u770B\u5B98\u65B9\u53D1\u5E03\u9875" }),
           " \xB7 \u4E0B\u8F7D\u540E\u6838\u5BF9 SHA-256"
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("label", { children: [
+        /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("label", { children: [
           "\u5B89\u88C5\u4F4D\u7F6E\uFF08\u53EF\u4FEE\u6539\uFF09",
-          /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("input", { "aria-label": "Godot \u5B89\u88C5\u76EE\u5F55", value: destination, disabled: busy2 || disabled, placeholder: "\u9009\u62E9\u5B89\u88C5\u4F4D\u7F6E", onChange: (e42) => {
+          /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("input", { "aria-label": "Godot \u5B89\u88C5\u76EE\u5F55", value: destination, disabled: busy2 || disabled, placeholder: "\u9009\u62E9\u5B89\u88C5\u4F4D\u7F6E", onChange: (e42) => {
             setDestination(e42.target.value);
             setConfirmed(false);
           } })
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("label", { className: "gw-install-confirm", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("input", { type: "checkbox", "aria-label": "\u786E\u8BA4 Godot \u4E0B\u8F7D\u548C\u5B89\u88C5\u76EE\u5F55", checked: confirmed, disabled: busy2 || disabled, onChange: (e42) => setConfirmed(e42.target.checked) }),
+        /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("label", { className: "gw-install-confirm", children: [
+          /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("input", { type: "checkbox", "aria-label": "\u786E\u8BA4 Godot \u4E0B\u8F7D\u548C\u5B89\u88C5\u76EE\u5F55", checked: confirmed, disabled: busy2 || disabled, onChange: (e42) => setConfirmed(e42.target.checked) }),
           "\u786E\u8BA4\u6B64\u7248\u672C\u3001\u4E0B\u8F7D\u5927\u5C0F\u548C\u5B89\u88C5\u76EE\u5F55\uFF0C\u5F00\u59CB\u4E0B\u8F7D\u5E76\u5B89\u88C5\u3002"
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("button", { type: "button", className: "gw-primary", onClick: start, disabled: busy2 || disabled || !confirmed || !destination.trim(), children: "\u786E\u8BA4\u4E0B\u8F7D\u5E76\u5B89\u88C5" })
+        /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("button", { type: "button", className: "gw-primary", onClick: start, disabled: busy2 || disabled || !confirmed || !destination.trim(), children: "\u786E\u8BA4\u4E0B\u8F7D\u5E76\u5B89\u88C5" })
       ] }),
-      job && /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("div", { role: "status", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("strong", { children: job.status === "unknown" ? "\u5B89\u88C5\u72B6\u6001\u5F85\u6838\u5BF9" : job.status === "cancelled" ? "\u5B89\u88C5\u5DF2\u53D6\u6D88" : job.status === "failed" ? "\u5B89\u88C5\u672A\u5B8C\u6210" : job.status === "cancelling" ? "\u6B63\u5728\u53D6\u6D88\uFF0C\u8BF7\u7B49\u5F85\u6E05\u7406" : phases[job.phase] ?? "\u51C6\u5907\u5B89\u88C5" }),
-        /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("p", { className: "gw-small gw-path", children: job.destination }),
-        active && job.total > 0 && /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)(import_jsx_runtime14.Fragment, { children: [
-          /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("progress", { "aria-label": "Godot \u4E0B\u8F7D\u8FDB\u5EA6", value: job.downloaded ?? 0, max: job.total }),
-          /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("span", { children: [
+      job && /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { role: "status", children: [
+        /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("strong", { children: job.status === "unknown" ? "\u5B89\u88C5\u72B6\u6001\u5F85\u6838\u5BF9" : job.status === "cancelled" ? "\u5B89\u88C5\u5DF2\u53D6\u6D88" : job.status === "failed" ? "\u5B89\u88C5\u672A\u5B8C\u6210" : job.status === "cancelling" ? "\u6B63\u5728\u53D6\u6D88\uFF0C\u8BF7\u7B49\u5F85\u6E05\u7406" : phases2[job.phase] ?? "\u51C6\u5907\u5B89\u88C5" }),
+        /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("p", { className: "gw-small gw-path", children: job.destination }),
+        active && job.total > 0 && /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)(import_jsx_runtime15.Fragment, { children: [
+          /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("progress", { "aria-label": "Godot \u4E0B\u8F7D\u8FDB\u5EA6", value: job.downloaded ?? 0, max: job.total }),
+          /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("span", { children: [
             " ",
             Math.floor((job.downloaded ?? 0) / job.total * 100),
             "%"
           ] })
         ] }),
-        active && /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)(import_jsx_runtime14.Fragment, { children: [
-          /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("p", { className: "gw-small gw-muted", children: "\u5173\u95ED\u8BBE\u7F6E\u540E\u4EFB\u52A1\u4ECD\u4F1A\u7EE7\u7EED\uFF1B\u91CD\u65B0\u6253\u5F00\u53EF\u67E5\u770B\u8FDB\u5EA6\u3002\u9700\u8981\u505C\u6B62\u8BF7\u70B9\u53D6\u6D88\u5B89\u88C5\u3002" }),
-          /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("button", { type: "button", className: "gw-secondary", disabled: busy2 || job.status === "cancelling", onClick: cancel, children: "\u53D6\u6D88\u5B89\u88C5" })
+        active && /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)(import_jsx_runtime15.Fragment, { children: [
+          /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("p", { className: "gw-small gw-muted", children: "\u5173\u95ED\u8BBE\u7F6E\u540E\u4EFB\u52A1\u4ECD\u4F1A\u7EE7\u7EED\uFF1B\u91CD\u65B0\u6253\u5F00\u53EF\u67E5\u770B\u8FDB\u5EA6\u3002\u9700\u8981\u505C\u6B62\u8BF7\u70B9\u53D6\u6D88\u5B89\u88C5\u3002" }),
+          /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("button", { type: "button", className: "gw-secondary", disabled: busy2 || job.status === "cancelling", onClick: cancel, children: "\u53D6\u6D88\u5B89\u88C5" })
         ] }),
-        job.message && /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("p", { className: "gw-small", children: job.message }),
-        job.status === "unknown" && /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)(import_jsx_runtime14.Fragment, { children: [
-          /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("button", { type: "button", className: "gw-secondary", disabled: busy2 || disabled, onClick: inspect, children: "\u6838\u5BF9\u4E0A\u6B21\u5B89\u88C5\u6587\u4EF6" }),
-          inspection && /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)(import_jsx_runtime14.Fragment, { children: [
-            /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("p", { className: "gw-small", role: "status", children: inspection.message }),
-            inspection.status === "files-present" && /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("button", { type: "button", className: "gw-secondary", disabled: busy2 || disabled, onClick: () => onUse(inspection.enginePath), children: "\u586B\u5165\u5DF2\u627E\u5230\u7684\u5F15\u64CE\u8DEF\u5F84" })
+        job.message && /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("p", { className: "gw-small", children: job.message }),
+        job.status === "unknown" && /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)(import_jsx_runtime15.Fragment, { children: [
+          /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("button", { type: "button", className: "gw-secondary", disabled: busy2 || disabled, onClick: inspect, children: "\u6838\u5BF9\u4E0A\u6B21\u5B89\u88C5\u6587\u4EF6" }),
+          inspection && /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)(import_jsx_runtime15.Fragment, { children: [
+            /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("p", { className: "gw-small", role: "status", children: inspection.message }),
+            inspection.status === "files-present" && /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("button", { type: "button", className: "gw-secondary", disabled: busy2 || disabled, onClick: () => onUse(inspection.enginePath), children: "\u586B\u5165\u5DF2\u627E\u5230\u7684\u5F15\u64CE\u8DEF\u5F84" })
           ] })
         ] }),
-        job.status === "installed" && /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)(import_jsx_runtime14.Fragment, { children: [
-          /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("p", { className: "gw-small", children: "\u5B89\u88C5\u5B8C\u6210\uFF0C\u5C1A\u672A\u8FDE\u63A5\u9879\u76EE\u3002" }),
-          /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("button", { type: "button", className: "gw-primary", disabled, onClick: () => onUse(job.result.enginePath), children: "\u4F7F\u7528\u6B64\u5F15\u64CE\u8DEF\u5F84" })
+        job.status === "installed" && /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)(import_jsx_runtime15.Fragment, { children: [
+          /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("p", { className: "gw-small", children: "\u5B89\u88C5\u5B8C\u6210\uFF0C\u5C1A\u672A\u8FDE\u63A5\u9879\u76EE\u3002" }),
+          /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("button", { type: "button", className: "gw-primary", disabled, onClick: () => onUse(job.result.enginePath), children: "\u4F7F\u7528\u6B64\u5F15\u64CE\u8DEF\u5F84" })
         ] })
       ] }),
-      error && /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("p", { className: "gw-settings-error", role: "alert", children: error })
-    ] })
-  ] });
-}
-
-// src/PlayableBuild.jsx
-var import_react19 = __toESM(require("react"), 1);
-
-// src/build-guidance.mjs
-var preparation = {
-  TEMPLATES_REQUIRED: "\u8FD8\u7F3A\u5C11\u5F53\u524D Godot \u7248\u672C\u7684 Windows \u6253\u5305\u7EC4\u4EF6\uFF0C\u6682\u65F6\u4E0D\u80FD\u751F\u6210\u8BD5\u73A9\u5305\u3002\u8BA9 AI \u5E2E\u4F60\u6838\u5BF9\u7248\u672C\u548C\u5B89\u88C5\u4F4D\u7F6E\u540E\uFF0C\u518D\u8865\u9F50\u7EC4\u4EF6\u3002",
-  ENGINE_REQUIRED: "\u5F53\u524D\u914D\u7F6E\u7684 Godot \u65E0\u6CD5\u7528\u4E8E\u6253\u5305\u3002\u8BA9 AI \u5148\u68C0\u67E5\u5F15\u64CE\u4F4D\u7F6E\u548C\u7248\u672C\uFF0C\u518D\u7EE7\u7EED\u751F\u6210\u8BD5\u73A9\u5305\u3002",
-  UNSUPPORTED_PROJECT: "\u8FD9\u4E2A\u5DE5\u7A0B\u5305\u542B\u5F53\u524D\u8BD5\u73A9\u6253\u5305\u5668\u5C1A\u4E0D\u652F\u6301\u7684\u4EE3\u7801\u6216\u6269\u5C55\u3002\u8BA9 AI \u5148\u6838\u5BF9\u5176\u4ED6\u5BFC\u51FA\u65B9\u5F0F\uFF0C\u4E0D\u8981\u4E3A\u6253\u5305\u5220\u9664\u8FD9\u4E9B\u5185\u5BB9\u3002",
-  OVERRIDE_UNSUPPORTED: "\u5DE5\u7A0B\u4F7F\u7528\u4E86\u989D\u5916\u7684\u8FD0\u884C\u8BBE\u7F6E\uFF0C\u5DE5\u4F5C\u53F0\u6682\u4E0D\u80FD\u76F4\u63A5\u6253\u5305\u3002\u8BA9 AI \u5148\u6838\u5BF9\u8FD9\u4E9B\u8BBE\u7F6E\u7684\u4F5C\u7528\uFF0C\u518D\u51B3\u5B9A\u5BFC\u51FA\u65B9\u5F0F\u3002"
-};
-function buildPreparationGuidance(job) {
-  if (job?.status === "failed" && !job.exportPassed && job.code === "SAVE_DIRECTORY_UNVERIFIED") return "\u6CA1\u6709\u786E\u8BA4\u72EC\u7ACB\u7684\u8BD5\u73A9\u5B58\u6863\u4F4D\u7F6E\uFF0C\u5DF2\u505C\u6B62\u542F\u52A8\u6E38\u620F\u3002\u8BF7\u5148\u6392\u67E5\u76EE\u5F55\u8BBE\u7F6E\uFF0C\u907F\u514D\u6539\u52A8\u5DF2\u6709\u8FDB\u5EA6\u3002";
-  if (job?.status !== "failed" || job.phase !== "checking" || job.exportPassed) return null;
-  return preparation[job.code] ?? null;
-}
-
-// src/PlayableBuild.jsx
-var import_jsx_runtime15 = require("react/jsx-runtime");
-var phases2 = { checking: "\u6838\u5BF9\u5F15\u64CE\u4E0E\u6A21\u677F", copying: "\u51C6\u5907\u72EC\u7ACB\u526F\u672C", import: "\u68C0\u67E5\u5DE5\u7A0B", export: "\u751F\u6210\u8BD5\u73A9\u5305", startup: "\u68C0\u67E5\u8BD5\u73A9\u7A0B\u5E8F\u542F\u52A8", saveDirectory: "\u72EC\u7ACB\u5B58\u6863\u4F4D\u7F6E", packedSaveDirectory: "\u6253\u5305\u540E\u7684\u5B58\u6863\u4F4D\u7F6E" };
-function PlayableBuild({ api, engineConfigured, disabled, onAssist }) {
-  const [job, setJob] = (0, import_react19.useState)(null);
-  const [busy2, setBusy] = (0, import_react19.useState)(false);
-  const [error, setError] = (0, import_react19.useState)("");
-  const [evidence, setEvidence] = (0, import_react19.useState)(null);
-  const [notice, setNotice] = (0, import_react19.useState)("");
-  const [graphics, setGraphics] = (0, import_react19.useState)("project");
-  const mounted = (0, import_react19.useRef)(true);
-  const requestId = (0, import_react19.useRef)(null);
-  const currentId = (0, import_react19.useRef)(null);
-  currentId.current = job?.id;
-  const active = ["running", "cancelling"].includes(job?.status);
-  const unconfirmed = job?.status === "unconfirmed";
-  const unverifiedSaves = Boolean(job?.exportPassed && job.saveIsolationVerified !== true);
-  const needsHelp = job && !active && !unconfirmed && !["ready", "cancelled"].includes(job.status);
-  const preparationGuidance = buildPreparationGuidance(job);
-  (0, import_react19.useEffect)(() => {
-    mounted.current = true;
-    const abort = new AbortController();
-    let timer;
-    async function poll() {
-      try {
-        const value = await api.call("buildStatus", {}, abort.signal);
-        if (mounted.current) setJob(value);
-      } catch (e42) {
-        if (!abort.signal.aborted) setError(e42.message);
-      }
-      if (!abort.signal.aborted) timer = setTimeout(poll, 2e3);
-    }
-    poll();
-    return () => {
-      mounted.current = false;
-      abort.abort();
-      clearTimeout(timer);
-    };
-  }, [api]);
-  (0, import_react19.useEffect)(() => {
-    setEvidence(null);
-    setNotice("");
-  }, [job?.id]);
-  async function act(action) {
-    const id = job?.id;
-    setBusy(true);
-    setError("");
-    try {
-      let args = { id: job?.id };
-      if (action === "buildStart") {
-        requestId.current ??= crypto.randomUUID();
-        args = { requestId: requestId.current, graphics };
-      }
-      const value = await api.call(action, args);
-      if (action === "buildStart") requestId.current = null;
-      if (!mounted.current) return;
-      if (action === "buildEvidence") {
-        if (currentId.current === id) setEvidence(value);
-      } else if (action === "buildOpenFolder") setNotice(value.message);
-      else setJob(value);
-    } catch (e42) {
-      if (mounted.current) setError(e42.message);
-    } finally {
-      if (mounted.current) setBusy(false);
-    }
-  }
-  return /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("section", { className: "gw-runtime", "aria-label": "\u751F\u6210\u8BD5\u73A9\u5305", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("h2", { children: "\u4EA4\u7ED9\u522B\u4EBA\u8BD5\u73A9" }),
-    /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("p", { className: "gw-small gw-muted", children: "\u751F\u6210\u53EF\u53CC\u51FB\u8FD0\u884C\u7684 Windows \u8BD5\u73A9\u5305\uFF0C\u4E0D\u7528\u6253\u5F00\u7F16\u8F91\u5668\u3002\u4F7F\u7528\u72EC\u7ACB\u5B58\u6863\uFF0C\u4E0D\u8986\u76D6\u539F\u5DE5\u7A0B\uFF1B\u5F53\u524D\u652F\u6301 GDScript\uFF0C\u9700\u5DF2\u5B89\u88C5\u5BF9\u5E94\u5BFC\u51FA\u6A21\u677F\u3002" }),
-    /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("details", { className: "gw-small", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("summary", { children: "\u9047\u5230\u663E\u5361\u517C\u5BB9\u95EE\u9898" }),
-      /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("label", { children: [
-        /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("input", { type: "checkbox", checked: graphics === "angle", disabled: busy2 || active || disabled || Boolean(requestId.current), onChange: (event) => setGraphics(event.target.checked ? "angle" : "project") }),
-        "\u672C\u6B21\u8BD5\u73A9\u5305\u5C1D\u8BD5\u517C\u5BB9\u56FE\u5F62\u65B9\u5F0F"
-      ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("p", { children: "\u4EC5\u9002\u7528\u4E8E Compatibility \u5DE5\u7A0B\uFF0C\u4F7F\u7528 ANGLE / Direct3D 11\u3002\u53EA\u6539\u53D8\u672C\u6B21\u6784\u5EFA\u526F\u672C\uFF0C\u4E0D\u4FEE\u6539\u5DE5\u7A0B\uFF1B\u5E76\u975E\u6240\u6709\u663E\u5361\u95EE\u9898\u90FD\u80FD\u89E3\u51B3\u3002\u539F\u5931\u8D25\u8BB0\u5F55\u4FDD\u7559\uFF0C\u4ECD\u9700\u5B9E\u9645\u8BD5\u73A9\u3002" })
-    ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { className: "gw-start-actions", children: [
-      needsHelp && onAssist && /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("button", { className: "gw-primary", disabled: busy2 || disabled, onClick: () => onAssist(job), children: "\u8BA9 AI \u6392\u67E5\u8FD9\u6B21\u5931\u8D25" }),
-      active ? /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("button", { className: "gw-secondary", disabled: busy2 || job.status === "cancelling", onClick: () => act("buildCancel"), children: "\u53D6\u6D88\u672C\u6B21\u6784\u5EFA" }) : /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("button", { className: "gw-secondary", disabled: busy2 || disabled || unconfirmed || !engineConfigured, onClick: () => act("buildStart"), children: job ? "\u91CD\u65B0\u751F\u6210\u8BD5\u73A9\u5305" : "\u751F\u6210 Windows \u8BD5\u73A9\u5305" }),
-      job?.exportPassed && /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("button", { className: job.startupPassed ? "gw-primary" : "gw-secondary", disabled: busy2 || active || unconfirmed || unverifiedSaves, onClick: () => act("buildOpenFolder"), children: "\u6253\u5F00\u8BD5\u73A9\u5305\u6587\u4EF6\u5939" })
-    ] }),
-    !engineConfigured && /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("p", { className: "gw-small", children: "\u5148\u5728\u9879\u76EE\u8BBE\u7F6E\u4E2D\u914D\u7F6E Godot\u3002" }),
-    error && /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("p", { role: "alert", children: error }),
-    notice && /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("p", { role: "status", children: notice }),
-    job && /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { "aria-live": "polite", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("p", { children: /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("strong", { children: active ? job.status === "cancelling" ? "\u6B63\u5728\u53D6\u6D88" : phases2[job.phase] ?? "\u6B63\u5728\u751F\u6210" : unconfirmed ? "\u539F\u6784\u5EFA\u72B6\u6001\u5F85\u786E\u8BA4" : job.status === "interrupted" ? "\u4E0A\u6B21\u6784\u5EFA\u672A\u5B8C\u6210" : unverifiedSaves ? "\u65E7\u8BD5\u73A9\u5305\u9700\u8981\u91CD\u65B0\u751F\u6210" : job.status === "ready" ? "\u8BD5\u73A9\u5305\u5DF2\u751F\u6210\uFF0C\u81EA\u52A8\u542F\u52A8\u68C0\u67E5\u901A\u8FC7" : job.exportPassed ? "\u6587\u4EF6\u5DF2\u751F\u6210\uFF0C\u542F\u52A8\u5C1A\u672A\u901A\u8FC7" : job.status === "cancelled" ? "\u672C\u6B21\u6784\u5EFA\u5DF2\u53D6\u6D88" : "\u6784\u5EFA\u672A\u5B8C\u6210" }) }),
-      !active && /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("p", { children: unconfirmed || job.status === "interrupted" ? job.message : unverifiedSaves ? "\u65E7\u5305\u6CA1\u6709\u6838\u5B9E\u72EC\u7ACB\u5B58\u6863\u4F4D\u7F6E\u3002\u8BF7\u91CD\u65B0\u751F\u6210\uFF0C\u907F\u514D\u5F71\u54CD\u5DF2\u6709\u8FDB\u5EA6\u3002" : job.exportPassed && !job.startupPassed ? "\u6E38\u620F\u672A\u80FD\u6B63\u5E38\u5B8C\u6210\u542F\u52A8\u68C0\u67E5\u3002\u6587\u4EF6\u5DF2\u4FDD\u7559\uFF0C\u5148\u6392\u67E5\u539F\u56E0\u518D\u4EA4\u7ED9\u522B\u4EBA\u8BD5\u73A9\u3002" : needsHelp ? preparationGuidance ?? "\u8FD9\u6B21\u6CA1\u6709\u5B8C\u6210\u53EF\u73A9\u5305\u68C0\u67E5\u3002\u53EF\u4EE5\u8BA9 AI \u5148\u6392\u67E5\u539F\u56E0\uFF0C\u4E0D\u4F1A\u81EA\u52A8\u91CD\u8BD5\u6216\u4FEE\u6539\u6E38\u620F\u3002" : job.message }),
-      !active && /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("p", { className: "gw-small gw-muted", children: [
-        new Date(job.startedAt).toLocaleString("zh-CN"),
-        " \xB7 \u81EA\u52A8\u542F\u52A8\u4E0D\u4EE3\u8868\u73A9\u6CD5\u6216\u4EBA\u5DE5\u8BD5\u73A9\u5DF2\u9A8C\u6536\u3002"
-      ] }),
-      job.graphics === "angle" && /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("p", { className: "gw-small", children: "\u672C\u6B21\u9009\u62E9\u4E86\u517C\u5BB9\u56FE\u5F62\u65B9\u5F0F\uFF1B\u901A\u8FC7\u542F\u52A8\u68C0\u67E5\u4E0D\u4EE3\u8868\u5386\u53F2\u5D29\u6E83\u5DF2\u89E3\u51B3\u3002" }),
-      needsHelp && job.message && /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("details", { className: "gw-small", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("summary", { children: "\u4E13\u4E1A\u4FE1\u606F\uFF1A\u5931\u8D25\u63D0\u793A" }),
-        /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("p", { style: { overflowWrap: "anywhere" }, children: job.message })
-      ] }),
-      job.output && /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("details", { className: "gw-small", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("summary", { children: "\u6587\u4EF6\u4FDD\u5B58\u4F4D\u7F6E" }),
-        /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("p", { style: { overflowWrap: "anywhere" }, children: job.output })
-      ] }),
-      job.hasEvidence && /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("button", { className: "gw-secondary", disabled: busy2, "aria-expanded": Boolean(evidence), onClick: () => evidence ? setEvidence(null) : act("buildEvidence"), children: evidence ? "\u6536\u8D77\u6784\u5EFA\u4F9D\u636E" : "\u67E5\u770B\u6784\u5EFA\u4F9D\u636E" })
-    ] }),
-    evidence && /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("div", { className: "gw-runtime-evidence", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("p", { children: evidence.sourceState === "changed" ? "\u5DE5\u7A0B\u5DF2\u4FEE\u6539\uFF0C\u6B64\u5305\u5BF9\u5E94\u8F83\u65E9\u7248\u672C\u3002" : evidence.sourceState === "unchanged" ? "\u8BFB\u53D6\u4F9D\u636E\u65F6\uFF0C\u6E90\u6587\u4EF6\u4E0E\u672C\u6B21\u6784\u5EFA\u4E00\u81F4\u3002" : "\u6E90\u6587\u4EF6\u72B6\u6001\u5C1A\u672A\u6838\u5B9E\u3002" }),
-      /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("p", { children: evidence.failure?.next }),
-      /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("ul", { children: evidence.limitations?.map((text) => /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("li", { children: text }, text)) }),
-      /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("details", { children: [
-        /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("summary", { children: "\u4E13\u4E1A\u4FE1\u606F\uFF1A\u6784\u5EFA\u65E5\u5FD7" }),
-        /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("p", { children: evidence.message }),
-        Object.entries(evidence.checks ?? {}).map(([name2, check]) => /* @__PURE__ */ (0, import_jsx_runtime15.jsxs)("pre", { children: [
-          phases2[name2] ?? name2,
-          " \xB7 \u9000\u51FA\u7801 ",
-          check.exitCode,
-          "\n",
-          check.stdout,
-          "\n",
-          check.stderr,
-          "\n",
-          check.fileLog,
-          check.displayTruncated ? "\n\uFF08\u5C55\u793A\u5DF2\u622A\u65AD\uFF0C\u5B8C\u6574\u65E5\u5FD7\u4FDD\u7559\u5728\u4EA7\u7269\u4E0A\u7EA7\u76EE\u5F55\uFF09" : ""
-        ] }, name2))
-      ] })
+      error && /* @__PURE__ */ (0, import_jsx_runtime15.jsx)("p", { className: "gw-settings-error", role: "alert", children: error })
     ] })
   ] });
 }
@@ -5517,7 +5564,7 @@ function App({ api = defaultApi, conversation = null, agentState = null, host = 
               setPage("conversation");
             } else setNotice("\u5EFA\u8BAE\u5C1A\u672A\u53D1\u9001\uFF0C\u8BF7\u8FDE\u63A5\u672C\u9879\u76EE\u5BF9\u8BDD\u3002");
           }) }, status.projectRoot) : /* @__PURE__ */ (0, import_jsx_runtime22.jsxs)(import_jsx_runtime22.Fragment, { children: [
-            /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(Lifecycle, { status, api, busy: Boolean(busy2) || Boolean(agentState?.running) || checking, onSaved: refresh, onDesign: requestFullDesign, onRepair: requestIterationRepair, onPlan: () => setPage("plan"), onDiagnose: () => setPage("diagnose") }, status.projectId),
+            /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(Lifecycle, { status, api, busy: Boolean(busy2) || Boolean(agentState?.running) || checking, onSaved: refresh, onDesign: requestFullDesign, onRepair: requestIterationRepair, onPlan: () => setPage("plan"), onDiagnose: () => setPage("diagnose"), onBuildAssist: assistBuildFailure }, status.projectId),
             /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(TaskOverview, { status, onDiagnose: () => setPage("diagnose"), renderTask: (task) => /* @__PURE__ */ (0, import_jsx_runtime22.jsx)(TaskCard, { task, health: status.recovery?.find((item) => item.taskId === task.id), busy: Boolean(busy2), onReview: () => {
               setModal({ task, reviewFingerprint: status.acceptanceSnapshot?.fingerprint });
               setError("");

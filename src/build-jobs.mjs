@@ -124,8 +124,8 @@ export class BuildJobs {
     }
     return output;
   }
-  async openFolder(root, id, { open = openWindowsFolder } = {}) {
-    const output = await this.verifiedOutput(root, id);
+  async openFolder(root, id, { open = openWindowsFolder, currentVersion = false } = {}) {
+    const output = currentVersion ? (await this.verifyDelivery(root, id)).output : await this.verifiedOutput(root, id);
     await open(output); return { status: 'requested', output, message: '已请求打开产物文件夹，请连同 EXE 和 PCK 一起保留。' };
   }
 }

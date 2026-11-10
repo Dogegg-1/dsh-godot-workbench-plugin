@@ -58,7 +58,7 @@ export function createWorkbenchHandler(config, controller = new ProjectControlle
         if (body.action === 'buildStart') return jobs.start(wb, args);
         if (body.action === 'buildCancel') return jobs.cancel(wb.root, args.id);
         if (body.action === 'buildEvidence') return jobs.evidence(wb.root, args.id);
-        if (body.action === 'buildOpenFolder') return jobs.openFolder(wb.root, args.id);
+        if (body.action === 'buildOpenFolder') return jobs.openFolder(wb.root, args.id, { currentVersion: args.currentVersion === true });
         return jobs.status(wb.root, args.id);
       }, { expectedProjectRoot: body.expectedProjectRoot, requireBinding: true });
       else if (body.action.startsWith('runtime')) value = await controller.use(async wb => {
