@@ -1,6 +1,6 @@
 {
   "name": "@xingyou/godot-workbench",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Local Godot planning, knowledge and diagnosis tools for DeepSeek Harness",
   "type": "module",
   "exports": {
@@ -13,7 +13,7 @@
   },
   "engines": {
     "node": ">=22",
-    "dsh": "0.2.1-rc.2"
+    "dsh": "0.2.1-rc.2 || 0.2.1-rc.3"
   },
   "dsh": {
     "manifestVersion": 1,
@@ -33,7 +33,7 @@
     }
   },
   "peerDependencies": {
-    "@deepseek-ai/dsh-tools": "0.2.1-rc.2"
+    "@deepseek-ai/dsh-tools": "0.2.1-rc.2 || 0.2.1-rc.3"
   },
   "peerDependenciesMeta": {
     "@deepseek-ai/dsh-tools": {
