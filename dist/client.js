@@ -1444,6 +1444,9 @@ var import_react4 = __toESM(require("react"), 1);
 // src/KnowledgeCards.jsx
 var import_react2 = __toESM(require("react"), 1);
 var import_jsx_runtime = require("react/jsx-runtime");
+function knowledgeSummary(entry) {
+  return entry.verification?.status === "project-auto-extracted" ? entry.content.replace(/^自动提炼 · 未经人工核对：/, "") : entry.content;
+}
 function KnowledgeCards({ result, categoryNames: categoryNames2, verificationNames: verificationNames2, busy: busy2, onRead, label = "\u77E5\u8BC6\u68C0\u7D22\u7ED3\u679C", filterResults = false }) {
   const [category, setCategory] = (0, import_react2.useState)("all");
   const categories = [...new Set(result.results.map((entry) => entry.category))];
@@ -1466,7 +1469,7 @@ function KnowledgeCards({ result, categoryNames: categoryNames2, verificationNam
         /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "gw-knowledge-category", children: categoryNames2[entry.category] || entry.category }),
         /* @__PURE__ */ (0, import_jsx_runtime.jsx)("h2", { title: entry.title, children: entry.title })
       ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "gw-knowledge-card-summary", children: entry.content }),
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { className: "gw-knowledge-card-summary", children: knowledgeSummary(entry) }),
       /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "gw-knowledge-card-bottom", children: [
         /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "gw-knowledge-verification", children: verificationNames2[entry.verification?.status] || "\u5F85\u6838\u5B9E" }),
         /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", { className: "gw-secondary gw-knowledge-read", disabled: busy2, onClick: () => onRead(entry.id), children: [
@@ -1699,12 +1702,18 @@ function brief(text, limit = 145) {
 function Recipe({ entry, busy: busy2, Modal: Modal2, DocumentView: DocumentView2, onClose, onDiscuss }) {
   const [error, setError] = (0, import_react4.useState)("");
   const body = entry.body.replace(/^# [^\r\n]+\r?\n\s*/, "");
-  const scope = firstMatch(body, "\u9002\u7528|\u9002\u7528\u60C5\u51B5|\u9002\u7528\u6761\u4EF6") || entry.version || "\u7ED3\u5408\u5F53\u524D\u5DE5\u7A0B\u6838\u5BF9\u9002\u7528\u8303\u56F4\u3002";
+  const automatic2 = entry.verification?.status === "project-auto-extracted";
+  const lesson = automatic2 ? knowledgeSummary(entry) : "";
+  const separateSource = lesson && body.startsWith(`${lesson}
+
+`);
+  const expanded = automatic2 ? separateSource ? body.slice(lesson.length).trimStart() : "" : body;
+  const scope = firstMatch(body, "\u9002\u7528|\u9002\u7528\u60C5\u51B5|\u9002\u7528\u6761\u4EF6|\u9002\u7528\u6761\u4EF6\u4E0E\u7248\u672C") || entry.version || "\u7ED3\u5408\u5F53\u524D\u5DE5\u7A0B\u6838\u5BF9\u9002\u7528\u8303\u56F4\u3002";
   const [summary, exampleCheck] = entry.content.split(/(?:验证|验收)[：:]/, 2);
-  const check = firstMatch(body, "\u9A8C\u8BC1|\u9A8C\u6536|\u9A8C\u8BC1\u6B65\u9AA4|\u6700\u5C0F\u9A8C\u8BC1") || exampleCheck || "\u9009\u4E00\u4E2A\u5C0F\u573A\u666F\u6309\u914D\u65B9\u8BD5\u505A\uFF0C\u8BB0\u5F55\u5B9E\u9645\u7ED3\u679C\u540E\u518D\u51B3\u5B9A\u662F\u5426\u91C7\u7528\u3002";
+  const check = firstMatch(body, "\u9A8C\u8BC1|\u9A8C\u6536|\u9A8C\u8BC1\u6B65\u9AA4|\u6700\u5C0F\u9A8C\u8BC1|\u7528\u6237\u8BB0\u5F55\u7684\u9A8C\u8BC1") || exampleCheck || "\u9009\u4E00\u4E2A\u5C0F\u573A\u666F\u6309\u914D\u65B9\u8BD5\u505A\uFF0C\u8BB0\u5F55\u5B9E\u9645\u7ED3\u679C\u540E\u518D\u51B3\u5B9A\u662F\u5426\u91C7\u7528\u3002";
   return /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)(Modal2, { title: entry.title, onClose, variant: "gw-knowledge-detail", children: [
     /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("p", { className: "gw-small gw-muted", children: verificationNames[entry.verification?.status] ?? "\u5F85\u6838\u5B9E" }),
-    /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("dl", { className: "gw-knowledge-quick-guide", children: [
+    automatic2 ? /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(DocumentView2, { text: separateSource ? lesson : body }) : /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("dl", { className: "gw-knowledge-quick-guide", children: [
       /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("div", { children: [
         /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("dt", { children: "\u9002\u7528\u60C5\u51B5" }),
         /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("dd", { children: brief(scope) })
@@ -1719,8 +1728,8 @@ function Recipe({ entry, busy: busy2, Modal: Modal2, DocumentView: DocumentView2
       ] })
     ] }),
     /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("details", { children: [
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("summary", { children: "\u5B8C\u6574\u914D\u65B9\u4E0E\u6765\u6E90" }),
-      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(DocumentView2, { text: body }),
+      /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("summary", { children: automatic2 ? "\u6765\u6E90\u4E0E\u6838\u5BF9\u8BF4\u660E" : "\u5B8C\u6574\u914D\u65B9\u4E0E\u6765\u6E90" }),
+      expanded && /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(DocumentView2, { text: expanded }),
       /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("p", { className: "gw-small gw-muted", children: [
         entry.version,
         " \xB7 \u66F4\u65B0 ",
@@ -1730,7 +1739,7 @@ function Recipe({ entry, busy: busy2, Modal: Modal2, DocumentView: DocumentView2
       /^https?:\/\//.test(entry.source) ? /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("a", { href: entry.source, target: "_blank", rel: "noreferrer", children: [
         "\u67E5\u770B\u539F\u59CB\u6765\u6E90 ",
         /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(n, { size: 15 })
-      ] }) : entry.source && /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("p", { className: "gw-small gw-muted", children: [
+      ] }) : !separateSource && entry.source && /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("p", { className: "gw-small gw-muted", children: [
         "\u6765\u6E90\uFF1A",
         entry.source
       ] })
