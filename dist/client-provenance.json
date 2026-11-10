@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "clientSha256": "b3b0d3a7a1e11db3696806a8f7b32f5ee351577d2d42f155e84b93c8130bff80",
+  "noticesSha256": "b7bd7fdc9c77dfcf6132a50fce63cfebd4aee08f0b954689f0884664276a2c99",
+  "bundled": [
+    {
+      "name": "@phosphor-icons/react",
+      "version": "2.1.10",
+      "license": "MIT",
+      "licenseSha256": "1609a422af374a9fe833b3e897ec3b1d9b5006b1ac69822e6001d599f426e330"
+    }
+  ],
+  "external": [
+    "react",
+    "react/jsx-runtime",
+    "react-dom"
+  ]
+}

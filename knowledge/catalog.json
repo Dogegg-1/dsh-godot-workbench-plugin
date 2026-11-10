@@ -1,0 +1,1323 @@
+{
+  "schemaVersion": 2,
+  "updatedAt": "2026-11-09",
+  "coverageNote": "43 条知识条目覆盖五类首期主题，其中 29 条提供可展开配方；不代表完整游戏开发学科。已查阅来源不等于通过运行验证。重点为 Windows、2D、GDScript；3D、C# 和具体平台支持需继续查证。",
+  "entries": [
+    {
+      "id": "engine-scenes",
+      "category": "engine",
+      "title": "可编辑场景与资源",
+      "tags": [
+        "场景",
+        "资源",
+        "tscn",
+        "tres",
+        "布局",
+        "参数",
+        "scene",
+        "resource"
+      ],
+      "stages": [
+        "plan",
+        "implement"
+      ],
+      "kind": "official-summary",
+      "version": "Godot 4.x，具体 API 核对实际版本",
+      "source": "https://docs.godotengine.org/en/stable/tutorials/scripting/resources.html",
+      "content": "节点承载功能，资源保存数据。需要制作人员调整的结构与默认参数应保存在场景、导出属性和资源中。共享资源可能被多个对象复用，修改前确认是否需要独立实例。自动生成的最终产物仍应能在编辑器中查看和调整。验收：调整代表性参数，保存、重开、运行后确认未被脚本覆盖。",
+      "updatedAt": "2026-11-08",
+      "verification": {
+        "status": "source-reviewed",
+        "checkedAt": "2026-11-08",
+        "note": "已查阅官方机制说明；具体 4.7.2 API 与项目实现仍需验证。"
+      }
+    },
+    {
+      "id": "engine-run",
+      "category": "engine",
+      "title": "引擎运行与导入检查",
+      "tags": [
+        "运行",
+        "导入",
+        "报错",
+        "headless",
+        "日志",
+        "Godot"
+      ],
+      "stages": [
+        "diagnose",
+        "verify"
+      ],
+      "kind": "official-summary",
+      "version": "Godot 4.x，参数以本机 --help 为准",
+      "source": "https://docs.godotengine.org/en/stable/tutorials/editor/command_line_tutorial.html",
+      "content": "运行前核对引擎版本、项目路径和入口。命令行可以运行项目、导入资源并收集日志。无界面检查只证明覆盖到的逻辑或导入结果，不证明视觉与手感通过。保留命令、退出码、错误日志与文件版本；遇到超时或截断输出要明确标记未完整检查。",
+      "updatedAt": "2026-11-08",
+      "verification": {
+        "status": "source-reviewed",
+        "checkedAt": "2026-11-08",
+        "note": "已查阅官方机制说明；具体 4.7.2 API 与项目实现仍需验证。"
+      }
+    },
+    {
+      "id": "engine-export",
+      "category": "engine",
+      "title": "导出与动态资源",
+      "tags": [
+        "导出",
+        "发布",
+        "资源",
+        "export",
+        "动态加载"
+      ],
+      "stages": [
+        "verify",
+        "finish"
+      ],
+      "kind": "official-summary",
+      "version": "Godot 4.x",
+      "source": "https://docs.godotengine.org/en/stable/tutorials/export/exporting_projects.html",
+      "content": "导出需要对应模板与预设。目录命名不直接决定出包范围，要检查资源选择、依赖与包含排除规则。通过路径拼接读取的资源需要额外核查。在独立导出包中验证正常入口、资源和存档；编辑器运行成功不等于发布验证成功。",
+      "updatedAt": "2026-11-08",
+      "verification": {
+        "status": "source-reviewed",
+        "checkedAt": "2026-11-08",
+        "note": "已查阅官方机制说明；具体 4.7.2 API 与项目实现仍需验证。"
+      }
+    },
+    {
+      "id": "design-loop",
+      "category": "design",
+      "title": "核心循环与最小范围",
+      "tags": [
+        "核心循环",
+        "增量",
+        "挖矿",
+        "原型",
+        "范围",
+        "玩法"
+      ],
+      "stages": [
+        "intake",
+        "plan"
+      ],
+      "kind": "original-recipe",
+      "version": "项目验证后修订",
+      "source": "project:templates/GDD.md",
+      "content": "先描述玩家行动、即时反馈、获得的资源以及资源如何改变下一轮行动。将首个原型限定为能验证该循环的一组功能，写明不包含的扩展。增量游戏可先验证挖矿、出售、升级，再决定是否添加自动生产与离线收益。未知玩法决定应提供两个具体选项及代价，不替用户拍板。",
+      "updatedAt": "2026-11-08",
+      "verification": {
+        "status": "recipe-not-runtime-tested",
+        "checkedAt": "2026-11-08",
+        "note": "原创方法或工作流约定；不是已通过的游戏体验结论。"
+      }
+    },
+    {
+      "id": "design-economy",
+      "category": "design",
+      "title": "增量收益与回本分析",
+      "tags": [
+        "数值",
+        "收益",
+        "升级",
+        "等待",
+        "回本",
+        "经济"
+      ],
+      "stages": [
+        "plan",
+        "diagnose",
+        "verify"
+      ],
+      "kind": "original-recipe",
+      "version": "公式假设需随项目说明",
+      "source": "project:docs/Godot独立游戏开发工作台项目方案.md",
+      "content": "在恒定收益且没有额外花费时，积累等待时间为价格除以当前每秒收益；升级的增量回本时间为成本除以新增每秒收益。分母为零时不能给出有限回本时间。攻击无间断时理想 TTK 为生命值除以 DPS；无敌、移动和阶段会延长实际时间。先约定目标节奏，再判断偏差，不用统一秒数评价所有游戏。",
+      "updatedAt": "2026-11-08",
+      "verification": {
+        "status": "recipe-not-runtime-tested",
+        "checkedAt": "2026-11-08",
+        "note": "原创方法或工作流约定；不是已通过的游戏体验结论。"
+      }
+    },
+    {
+      "id": "design-onboarding",
+      "category": "design",
+      "title": "目标与反馈是否清楚",
+      "tags": [
+        "教程",
+        "反馈",
+        "目标",
+        "玩家",
+        "困惑",
+        "新手",
+        "下一步",
+        "可读性"
+      ],
+      "stages": [
+        "plan",
+        "verify"
+      ],
+      "kind": "original-recipe",
+      "version": "需要试玩验证",
+      "source": "project:templates/GDD.md",
+      "content": "检查第一次进入时玩家是否知道能做什么、动作有没有发生、为什么成功或失败，以及下一步目标。对余额不足等失败给明确反馈。验证可以记录首次完成核心动作所需时间和误操作次数，但小样本只作为改进线索，不能当成留存结论。",
+      "updatedAt": "2026-11-08",
+      "verification": {
+        "status": "recipe-not-runtime-tested",
+        "checkedAt": "2026-11-08",
+        "note": "原创方法或工作流约定；不是已通过的游戏体验结论。"
+      }
+    },
+    {
+      "id": "engineering-save",
+      "category": "engineering",
+      "title": "存档与兼容边界",
+      "tags": [
+        "存档",
+        "保存",
+        "加载",
+        "JSON",
+        "序列化",
+        "损坏",
+        "save",
+        "坏档",
+        "写入保护",
+        "覆盖",
+        "自动保存"
+      ],
+      "stages": [
+        "implement",
+        "diagnose",
+        "verify"
+      ],
+      "kind": "official-summary-and-recipe",
+      "version": "Godot 4.x；迁移策略为项目建议",
+      "source": "https://docs.godotengine.org/en/stable/tutorials/io/saving_games.html",
+      "content": "先定义持久化字段、格式版本和校验范围。损坏原档不静默覆盖：Load 失败后，Save、自动保存和退出保存也必须保留原件；成功恢复有效档后才能恢复正常写入。比较轻量 JSON 与带备份/恢复的存储方案，用隔离路径测试完整操作序列。",
+      "updatedAt": "2026-11-08",
+      "verification": {
+        "status": "source-reviewed",
+        "checkedAt": "2026-11-08",
+        "note": "已查阅官方存档、JSON 和 FileAccess 机制；本机连续开发验证复现了坏档后保存覆盖的问题。配方策略和中断恢复仍需针对实际项目验证。"
+      },
+      "bodyPath": "recipes/engineering-save.md"
+    },
+    {
+      "id": "engineering-scenes",
+      "category": "engineering",
+      "title": "场景职责与通信",
+      "tags": [
+        "场景",
+        "信号",
+        "状态机",
+        "耦合",
+        "节点",
+        "架构"
+      ],
+      "stages": [
+        "plan",
+        "implement"
+      ],
+      "kind": "official-summary",
+      "version": "Godot 4.x",
+      "source": "https://docs.godotengine.org/en/stable/tutorials/best_practices/scene_organization.html",
+      "content": "可复用场景应尽量独立于外部固定节点路径，由合适的父级传入依赖或连接信号。拆场景前检查生命周期、变换、引用和实例覆盖。无需为小项目机械增加全局事件总线或管理器；按实际职责选择结构，并验证原行为没有改变。",
+      "updatedAt": "2026-11-08",
+      "verification": {
+        "status": "source-reviewed",
+        "checkedAt": "2026-11-08",
+        "note": "已查阅官方机制说明；具体 4.7.2 API 与项目实现仍需验证。"
+      }
+    },
+    {
+      "id": "engineering-performance",
+      "category": "engineering",
+      "title": "先测量再优化",
+      "tags": [
+        "性能",
+        "帧率",
+        "卡顿",
+        "帧时间",
+        "CPU",
+        "GPU",
+        "对象池",
+        "优化",
+        "profile"
+      ],
+      "stages": [
+        "diagnose",
+        "verify"
+      ],
+      "kind": "official-summary",
+      "version": "记录设备、引擎与渲染配置",
+      "source": "https://docs.godotengine.org/en/stable/tutorials/performance/general_optimization.html",
+      "content": "区分持续慢、偶发卡顿与加载等待。优化前记录可复现操作和测量基线，在相同条件下比较。CPU 分析器不能覆盖全部 GPU 或系统瓶颈。对象池、空间索引与更新频率调整都应基于测量，不把架构变复杂视为性能提高。",
+      "updatedAt": "2026-11-08",
+      "verification": {
+        "status": "source-reviewed",
+        "checkedAt": "2026-11-08",
+        "note": "已查阅官方机制说明；具体 4.7.2 API 与项目实现仍需验证。"
+      }
+    },
+    {
+      "id": "feel-jump",
+      "category": "feel",
+      "title": "跳跃曲线的可调参数",
+      "tags": [
+        "跳跃",
+        "手感",
+        "飘",
+        "上升",
+        "下落",
+        "跳起来",
+        "重力",
+        "jump",
+        "gravity"
+      ],
+      "stages": [
+        "plan",
+        "implement",
+        "diagnose"
+      ],
+      "kind": "original-recipe",
+      "version": "匀加速度理想模型，坐标符号按项目约定",
+      "source": "project:knowledge/catalog.json#feel-jump",
+      "content": "先确定目标跳高 h 与到达顶点时间 t。在忽略其他力的理想模型中，重力大小 g=2h/t²，初始上跳速度大小 v=2h/t。下降倍率影响落地速度，提前松键可改变短跳高度。输入缓冲、离地宽限时间和碰撞判定独立验证。公式只给参数起点，最终以实际输入、轨迹和试玩判断。",
+      "updatedAt": "2026-11-08",
+      "verification": {
+        "status": "recipe-not-runtime-tested",
+        "checkedAt": "2026-11-08",
+        "note": "原创方法或工作流约定；不是已通过的游戏体验结论。"
+      }
+    },
+    {
+      "id": "feel-feedback",
+      "category": "feel",
+      "title": "操作反馈与表现预算",
+      "tags": [
+        "打击感",
+        "震屏",
+        "镜头",
+        "音效",
+        "动画",
+        "反馈"
+      ],
+      "stages": [
+        "plan",
+        "implement",
+        "verify"
+      ],
+      "kind": "original-recipe",
+      "version": "需结合玩法与可访问性测试",
+      "source": "project:templates/GDD.md",
+      "content": "把一次动作拆成输入响应、状态变化、视觉与声音反馈。先确保响应及时和结果清楚，再尝试停顿、镜头或粒子等表现。参数提供编辑入口；震屏与高强度效果允许降低或关闭。比较同一动作调整前后的关键帧、时间和试玩感受，不能凭单张截图声称打击感改善。",
+      "updatedAt": "2026-11-08",
+      "verification": {
+        "status": "recipe-not-runtime-tested",
+        "checkedAt": "2026-11-08",
+        "note": "原创方法或工作流约定；不是已通过的游戏体验结论。"
+      }
+    },
+    {
+      "id": "feel-camera",
+      "category": "feel",
+      "title": "镜头与移动的验证",
+      "tags": [
+        "镜头",
+        "跟随",
+        "移动",
+        "平滑",
+        "camera"
+      ],
+      "stages": [
+        "implement",
+        "verify"
+      ],
+      "kind": "original-recipe",
+      "version": "具体引擎属性需查询当前版本",
+      "source": "project:templates/GDD.md",
+      "content": "先明确镜头应展示的玩家信息、提前量和边界。分别检查站立、加速、转向、快速位移与场景切换。平滑过强可能延迟信息，过弱可能造成抖动；通过可重复路线比较，不盲目提高平滑值。确认不同帧率下表现一致。",
+      "updatedAt": "2026-11-08",
+      "verification": {
+        "status": "recipe-not-runtime-tested",
+        "checkedAt": "2026-11-08",
+        "note": "原创方法或工作流约定；不是已通过的游戏体验结论。"
+      }
+    },
+    {
+      "id": "production-planning",
+      "category": "production",
+      "title": "GDD 与开工确认",
+      "tags": [
+        "GDD",
+        "计划",
+        "规划",
+        "模糊",
+        "澄清",
+        "确认",
+        "开工"
+      ],
+      "stages": [
+        "intake",
+        "plan"
+      ],
+      "kind": "project-policy",
+      "version": "初版工作流",
+      "source": "project:templates/PROJECT_INTAKE.md",
+      "content": "整理已确认、建议、假设和未知。优先问一至三个影响方向的问题，并提供推荐及代价。形成当前阶段 GDD、开发计划、范围与验收，用户确认对应版本后实施。后续实质范围变化要重新确认受影响部分；低风险工程细节不重复审批。",
+      "updatedAt": "2026-11-08",
+      "verification": {
+        "status": "project-policy",
+        "checkedAt": "2026-11-08",
+        "note": "原创方法或工作流约定；不是已通过的游戏体验结论。"
+      }
+    },
+    {
+      "id": "production-evidence",
+      "category": "production",
+      "title": "变更记录与验收证据",
+      "tags": [
+        "验收",
+        "证据",
+        "变更",
+        "诊断",
+        "总结",
+        "测试"
+      ],
+      "stages": [
+        "verify",
+        "finish",
+        "diagnose"
+      ],
+      "kind": "project-policy",
+      "version": "初版工作流",
+      "source": "project:templates/DEVELOPMENT_PLAN.md",
+      "content": "总结依据实际差异与工具结果，分别记录实现、静态检查、真实输入、画面和人工试玩。未运行必须明确标记。说明玩家可感知变化、参数入口、临时方案和未验证项。文件变化后旧证据失效，不能把旧版本通过结论用于新版本。",
+      "updatedAt": "2026-11-08",
+      "verification": {
+        "status": "project-policy",
+        "checkedAt": "2026-11-08",
+        "note": "原创方法或工作流约定；不是已通过的游戏体验结论。"
+      }
+    },
+    {
+      "id": "production-scope",
+      "category": "production",
+      "title": "范围变化与可恢复修改",
+      "tags": [
+        "范围",
+        "返工",
+        "恢复",
+        "回滚",
+        "Git",
+        "版本",
+        "临时"
+      ],
+      "stages": [
+        "plan",
+        "implement",
+        "finish"
+      ],
+      "kind": "project-policy",
+      "version": "初版工作流",
+      "source": "project:docs/Godot独立游戏开发工作台项目方案.md",
+      "content": "开始前识别用户已有修改，记录本任务涉及的文件。恢复只针对可明确归属的改动，保护用户后续编辑，冲突时保留现场。临时修复记录原因、限制和移除条件。明显超范围时提出保留核心体验的缩减方案，由用户决定。",
+      "updatedAt": "2026-11-08",
+      "verification": {
+        "status": "project-policy",
+        "checkedAt": "2026-11-08",
+        "note": "原创方法或工作流约定；不是已通过的游戏体验结论。"
+      }
+    },
+    {
+      "id": "engine-ui-layout",
+      "category": "engine",
+      "title": "窗口缩放与 UI 容器布局",
+      "tags": [
+        "UI",
+        "界面",
+        "窗口",
+        "分辨率",
+        "锚点",
+        "容器",
+        "挤在一起",
+        "按钮跑偏",
+        "缩放",
+        "Container"
+      ],
+      "source": "https://docs.godotengine.org/en/stable/tutorials/ui/gui_containers.html",
+      "content": "窗口变窄时按钮重叠，先检查父容器、最小尺寸与扩展选项。容器控制子 Control 的布局，不要反复用脚本覆盖位置。",
+      "bodyPath": "recipes/engine-ui-layout.md",
+      "stages": [
+        "implement",
+        "diagnose",
+        "verify"
+      ],
+      "kind": "official-summary-and-recipe",
+      "version": "Godot 4.x 机制；具体 API 以本机版本查证为准",
+      "updatedAt": "2026-11-08",
+      "verification": {
+        "status": "source-reviewed",
+        "checkedAt": "2026-11-08",
+        "note": "已查阅链接的官方机制说明；后续步骤与数值为原创项目建议，不代表官方最佳值。"
+      }
+    },
+    {
+      "id": "engine-input",
+      "category": "engine",
+      "title": "按键映射、UI 吞输入与重复点击",
+      "tags": [
+        "输入",
+        "按键",
+        "键盘",
+        "手柄",
+        "点不动",
+        "点击两次",
+        "重复触发",
+        "InputMap",
+        "InputEvent",
+        "事件"
+      ],
+      "source": "https://docs.godotengine.org/en/stable/tutorials/inputs/inputevent.html",
+      "content": "按钮点不动或一次触发两次，分别检查输入映射、UI 事件传播与重复绑定。区分按住状态和单次按下。",
+      "bodyPath": "recipes/engine-input.md",
+      "stages": [
+        "implement",
+        "diagnose",
+        "verify"
+      ],
+      "kind": "official-summary-and-recipe",
+      "version": "Godot 4.x 机制；具体 API 以本机版本查证为准",
+      "updatedAt": "2026-11-08",
+      "verification": {
+        "status": "source-reviewed",
+        "checkedAt": "2026-11-08",
+        "note": "已查阅链接的官方机制说明；后续步骤与数值为原创项目建议，不代表官方最佳值。"
+      }
+    },
+    {
+      "id": "engine-motion",
+      "category": "engine",
+      "title": "角色穿墙、碰撞层和物理移动",
+      "tags": [
+        "角色",
+        "穿墙",
+        "碰撞",
+        "斜坡",
+        "物理",
+        "CharacterBody2D",
+        "move_and_slide",
+        "velocity",
+        "delta"
+      ],
+      "source": "https://docs.godotengine.org/en/stable/tutorials/physics/using_character_body_2d.html",
+      "content": "CharacterBody 的重力与移动由代码控制。穿墙先核对碰撞形状、层与掩码，以及是否绕过移动碰撞方法直接改位置。",
+      "bodyPath": "recipes/engine-motion.md",
+      "stages": [
+        "implement",
+        "diagnose",
+        "verify"
+      ],
+      "kind": "official-summary-and-recipe",
+      "version": "Godot 4.x 机制；具体 API 以本机版本查证为准",
+      "updatedAt": "2026-11-08",
+      "verification": {
+        "status": "source-reviewed",
+        "checkedAt": "2026-11-08",
+        "note": "已查阅链接的官方机制说明；后续步骤与数值为原创项目建议，不代表官方最佳值。"
+      }
+    },
+    {
+      "id": "engine-animation",
+      "category": "engine",
+      "title": "动画覆盖参数与 AnimationPlayer 分工",
+      "tags": [
+        "动画",
+        "AnimationPlayer",
+        "AnimationTree",
+        "Tween",
+        "属性被改回",
+        "闪烁",
+        "过渡"
+      ],
+      "source": "https://docs.godotengine.org/en/stable/tutorials/animation/introduction.html",
+      "content": "属性运行时被改回时，检查动画轨道和脚本是否同时写入。固定时间线与临时过渡应分开管理。",
+      "bodyPath": "recipes/engine-animation.md",
+      "stages": [
+        "implement",
+        "diagnose",
+        "verify"
+      ],
+      "kind": "official-summary-and-recipe",
+      "version": "Godot 4.x 机制；具体 API 以本机版本查证为准",
+      "updatedAt": "2026-11-08",
+      "verification": {
+        "status": "source-reviewed",
+        "checkedAt": "2026-11-08",
+        "note": "已查阅链接的官方机制说明；后续步骤与数值为原创项目建议，不代表官方最佳值。"
+      }
+    },
+    {
+      "id": "engine-audio",
+      "category": "engine",
+      "title": "音量总线、重复音效与削波",
+      "tags": [
+        "声音",
+        "音效",
+        "音量",
+        "爆音",
+        "削波",
+        "音乐",
+        "Audio",
+        "静音",
+        "bus"
+      ],
+      "source": "https://docs.godotengine.org/en/stable/tutorials/audio/audio_buses.html",
+      "content": "音乐与音效分总线，分别控制音量。重复触发时测峰值和播放数量；不能靠无限叠加制造反馈。",
+      "bodyPath": "recipes/engine-audio.md",
+      "stages": [
+        "implement",
+        "diagnose",
+        "verify"
+      ],
+      "kind": "official-summary-and-recipe",
+      "version": "Godot 4.x 机制；具体 API 以本机版本查证为准",
+      "updatedAt": "2026-11-08",
+      "verification": {
+        "status": "source-reviewed",
+        "checkedAt": "2026-11-08",
+        "note": "已查阅链接的官方机制说明；后续步骤与数值为原创项目建议，不代表官方最佳值。"
+      }
+    },
+    {
+      "id": "engine-tilemap",
+      "category": "engine",
+      "title": "瓦片地图、碰撞与场景实例的选择",
+      "tags": [
+        "地图",
+        "瓦片",
+        "TileMapLayer",
+        "TileSet",
+        "关卡",
+        "地形",
+        "格子",
+        "tilemap"
+      ],
+      "source": "https://docs.godotengine.org/en/stable/tutorials/2d/using_tilesets.html",
+      "content": "大量规则地形可用 TileSet/TileMapLayer；交互对象是否独立场景取决于状态和生命周期，不必把所有东西做成瓦片。",
+      "bodyPath": "recipes/engine-tilemap.md",
+      "stages": [
+        "implement",
+        "diagnose",
+        "verify"
+      ],
+      "kind": "official-summary-and-recipe",
+      "version": "Godot 4.x 机制；具体 API 以本机版本查证为准",
+      "updatedAt": "2026-11-08",
+      "verification": {
+        "status": "source-reviewed",
+        "checkedAt": "2026-11-08",
+        "note": "已查阅链接的官方机制说明；后续步骤与数值为原创项目建议，不代表官方最佳值。"
+      }
+    },
+    {
+      "id": "engine-shader",
+      "category": "engine",
+      "title": "2D 着色器与材质共享排错",
+      "tags": [
+        "着色器",
+        "shader",
+        "材质",
+        "闪白",
+        "描边",
+        "颜色",
+        "ShaderMaterial"
+      ],
+      "source": "https://docs.godotengine.org/en/stable/tutorials/shaders/your_first_shader/your_first_2d_shader.html",
+      "content": "2D 效果使用对应的 CanvasItem 材质路径。只想让一个对象闪白却全体变化时，先检查材质实例是否共享。",
+      "bodyPath": "recipes/engine-shader.md",
+      "stages": [
+        "implement",
+        "diagnose",
+        "verify"
+      ],
+      "kind": "official-summary-and-recipe",
+      "version": "Godot 4.x 机制；具体 API 以本机版本查证为准",
+      "updatedAt": "2026-11-08",
+      "verification": {
+        "status": "source-reviewed",
+        "checkedAt": "2026-11-08",
+        "note": "已查阅链接的官方机制说明；后续步骤与数值为原创项目建议，不代表官方最佳值。"
+      }
+    },
+    {
+      "id": "engine-pause",
+      "category": "engine",
+      "title": "暂停菜单与仍在增长的资源",
+      "tags": [
+        "暂停",
+        "菜单",
+        "暂停后还动",
+        "后台增长",
+        "process_mode",
+        "SceneTree",
+        "paused"
+      ],
+      "source": "https://docs.godotengine.org/en/stable/tutorials/scripting/pausing_games.html",
+      "content": "暂停树与节点 process mode 共同决定行为。暂停菜单必须能响应恢复按钮，经济计时、音效和动画分别验收。",
+      "bodyPath": "recipes/engine-pause.md",
+      "stages": [
+        "implement",
+        "diagnose",
+        "verify"
+      ],
+      "kind": "official-summary-and-recipe",
+      "version": "Godot 4.x 机制；具体 API 以本机版本查证为准",
+      "updatedAt": "2026-11-08",
+      "verification": {
+        "status": "source-reviewed",
+        "checkedAt": "2026-11-08",
+        "note": "已查阅链接的官方机制说明；后续步骤与数值为原创项目建议，不代表官方最佳值。"
+      }
+    },
+    {
+      "id": "engine-parameters",
+      "category": "engine",
+      "title": "导出属性、共享 Resource 与可调数值",
+      "tags": [
+        "参数",
+        "导出属性",
+        "export",
+        "Resource",
+        "数值表",
+        "改了又恢复",
+        "共享资源",
+        "Inspector"
+      ],
+      "source": "https://docs.godotengine.org/en/stable/tutorials/scripting/resources.html",
+      "content": "把可调默认值与运行时状态分开；共享 Resource 的修改可能影响多个对象。运行时不要无条件覆盖编辑器参数。",
+      "bodyPath": "recipes/engine-parameters.md",
+      "stages": [
+        "implement",
+        "diagnose",
+        "verify"
+      ],
+      "kind": "official-summary-and-recipe",
+      "version": "Godot 4.x 机制；具体 API 以本机版本查证为准",
+      "updatedAt": "2026-11-08",
+      "verification": {
+        "status": "source-reviewed",
+        "checkedAt": "2026-11-08",
+        "note": "已查阅链接的官方机制说明；后续步骤与数值为原创项目建议，不代表官方最佳值。"
+      }
+    },
+    {
+      "id": "design-combat",
+      "category": "design",
+      "title": "DPS、TTK 与战斗数值缺口",
+      "tags": [
+        "战斗",
+        "Boss",
+        "血量",
+        "伤害",
+        "DPS",
+        "TTK",
+        "打不动",
+        "击杀",
+        "暴击"
+      ],
+      "content": "先算理想击杀时间，再加入命中率和有效攻击时间。3000 血、120 DPS 得 25 秒；目标 12 秒时需 250 DPS，缺口 130。",
+      "bodyPath": "recipes/design-combat.md",
+      "stages": [
+        "plan",
+        "diagnose",
+        "verify"
+      ],
+      "kind": "original-recipe",
+      "version": "原创方法；参数为假设或原型起点，需项目验证",
+      "source": "project:knowledge/recipes/design-combat.md",
+      "updatedAt": "2026-11-08",
+      "verification": {
+        "status": "recipe-not-runtime-tested",
+        "checkedAt": "2026-11-08",
+        "note": "算例与方法用于讨论；尚未证明适合当前游戏。"
+      }
+    },
+    {
+      "id": "design-upgrade-curve",
+      "category": "design",
+      "title": "增量升级曲线与购买等待",
+      "tags": [
+        "升级",
+        "价格曲线",
+        "指数",
+        "几何级数",
+        "涨价",
+        "买不起",
+        "回本",
+        "产出",
+        "增量"
+      ],
+      "content": "分别计算积累等待与增量回本，检查升级后的新增收益能否追上价格增长。不能只看一阶升级。",
+      "bodyPath": "recipes/design-upgrade-curve.md",
+      "stages": [
+        "plan",
+        "diagnose",
+        "verify"
+      ],
+      "kind": "original-recipe",
+      "version": "原创方法；参数为假设或原型起点，需项目验证",
+      "source": "project:knowledge/recipes/design-upgrade-curve.md",
+      "updatedAt": "2026-11-08",
+      "verification": {
+        "status": "recipe-not-runtime-tested",
+        "checkedAt": "2026-11-08",
+        "note": "算例与方法用于讨论；尚未证明适合当前游戏。"
+      }
+    },
+    {
+      "id": "design-difficulty",
+      "category": "design",
+      "title": "难度曲线与失败原因拆分",
+      "tags": [
+        "难度",
+        "太难",
+        "太简单",
+        "失败",
+        "关卡",
+        "学习曲线",
+        "挑战"
+      ],
+      "content": "把失败拆成理解、操作与策略问题，避免只调血量。用同一批可复现关卡比较具体参数。",
+      "bodyPath": "recipes/design-difficulty.md",
+      "stages": [
+        "plan",
+        "diagnose",
+        "verify"
+      ],
+      "kind": "original-recipe",
+      "version": "原创方法；参数为假设或原型起点，需项目验证",
+      "source": "project:knowledge/recipes/design-difficulty.md",
+      "updatedAt": "2026-11-08",
+      "verification": {
+        "status": "recipe-not-runtime-tested",
+        "checkedAt": "2026-11-08",
+        "note": "算例与方法用于讨论；尚未证明适合当前游戏。"
+      }
+    },
+    {
+      "id": "design-rewards",
+      "category": "design",
+      "title": "奖励节奏与有效选择",
+      "tags": [
+        "奖励",
+        "节奏",
+        "无聊",
+        "目标",
+        "选择",
+        "随机掉落",
+        "留存"
+      ],
+      "content": "奖励先服务于下一步可见目标，再讨论频率。区分短期反馈、中期解锁与长期目标，不承诺仅靠奖励提高留存。",
+      "bodyPath": "recipes/design-rewards.md",
+      "stages": [
+        "plan",
+        "diagnose",
+        "verify"
+      ],
+      "kind": "original-recipe",
+      "version": "原创方法；参数为假设或原型起点，需项目验证",
+      "source": "project:knowledge/recipes/design-rewards.md",
+      "updatedAt": "2026-11-08",
+      "verification": {
+        "status": "recipe-not-runtime-tested",
+        "checkedAt": "2026-11-08",
+        "note": "算例与方法用于讨论；尚未证明适合当前游戏。"
+      }
+    },
+    {
+      "id": "design-playtest",
+      "category": "design",
+      "title": "原型试玩与可观察验收",
+      "tags": [
+        "试玩",
+        "体验",
+        "验证玩法",
+        "用户测试",
+        "好不好玩",
+        "观察",
+        "原型验证"
+      ],
+      "content": "把“好不好玩”拆成可观察假设，记录玩家实际行为与口述。自动检查、制作者试玩与外部试玩分别标记。",
+      "bodyPath": "recipes/design-playtest.md",
+      "stages": [
+        "plan",
+        "diagnose",
+        "verify"
+      ],
+      "kind": "original-recipe",
+      "version": "原创方法；参数为假设或原型起点，需项目验证",
+      "source": "project:knowledge/recipes/design-playtest.md",
+      "updatedAt": "2026-11-08",
+      "verification": {
+        "status": "recipe-not-runtime-tested",
+        "checkedAt": "2026-11-08",
+        "note": "算例与方法用于讨论；尚未证明适合当前游戏。"
+      }
+    },
+    {
+      "id": "engineering-state-machine",
+      "category": "engineering",
+      "title": "状态机与非法状态组合",
+      "tags": [
+        "状态机",
+        "状态",
+        "state",
+        "idle",
+        "互相打断",
+        "攻击时移动",
+        "布尔变量"
+      ],
+      "content": "状态增多时先列合法转移、进入退出动作和取消规则。少量状态用枚举，多行为复用再考虑状态对象。",
+      "bodyPath": "recipes/engineering-state-machine.md",
+      "stages": [
+        "implement",
+        "diagnose",
+        "verify"
+      ],
+      "kind": "original-recipe",
+      "version": "原创方法；参数为假设或原型起点，需项目验证",
+      "source": "project:knowledge/recipes/engineering-state-machine.md",
+      "updatedAt": "2026-11-08",
+      "verification": {
+        "status": "recipe-not-runtime-tested",
+        "checkedAt": "2026-11-08",
+        "note": "算例与方法用于讨论；尚未证明适合当前游戏。"
+      }
+    },
+    {
+      "id": "engineering-pooling",
+      "category": "engineering",
+      "title": "对象池与残留状态排查",
+      "tags": [
+        "对象池",
+        "pool",
+        "子弹",
+        "粒子",
+        "实例化",
+        "回收",
+        "残留状态"
+      ],
+      "content": "先测创建销毁成本，再决定是否池化。回收必须重置状态、连接与计时器，防止旧实例污染下一次使用。",
+      "bodyPath": "recipes/engineering-pooling.md",
+      "stages": [
+        "implement",
+        "diagnose",
+        "verify"
+      ],
+      "kind": "original-recipe",
+      "version": "原创方法；参数为假设或原型起点，需项目验证",
+      "source": "project:knowledge/recipes/engineering-pooling.md",
+      "updatedAt": "2026-11-08",
+      "verification": {
+        "status": "recipe-not-runtime-tested",
+        "checkedAt": "2026-11-08",
+        "note": "算例与方法用于讨论；尚未证明适合当前游戏。"
+      }
+    },
+    {
+      "id": "engineering-dialogue",
+      "category": "engineering",
+      "title": "分支对话、条件与一次性效果",
+      "tags": [
+        "对话",
+        "分支",
+        "条件判断",
+        "剧情",
+        "选项",
+        "任务标记",
+        "dialogue",
+        "flag"
+      ],
+      "content": "对话数据与显示分开；条件读取状态，效果改变状态。用稳定节点 ID 和明确的缺失分支处理避免死路与重复发奖。",
+      "bodyPath": "recipes/engineering-dialogue.md",
+      "stages": [
+        "implement",
+        "diagnose",
+        "verify"
+      ],
+      "kind": "original-recipe",
+      "version": "原创方法；参数为假设或原型起点，需项目验证",
+      "source": "project:knowledge/recipes/engineering-dialogue.md",
+      "updatedAt": "2026-11-08",
+      "verification": {
+        "status": "recipe-not-runtime-tested",
+        "checkedAt": "2026-11-08",
+        "note": "算例与方法用于讨论；尚未证明适合当前游戏。"
+      }
+    },
+    {
+      "id": "engineering-inventory",
+      "category": "engineering",
+      "title": "背包与购买的原子结算",
+      "tags": [
+        "背包",
+        "购买",
+        "交易",
+        "扣钱",
+        "负数",
+        "重复购买",
+        "物品",
+        "inventory"
+      ],
+      "content": "先验证余额、容量与商品条件，再一次提交扣款和发货。失败不能只完成一半，也不能重复点击重复结算。",
+      "bodyPath": "recipes/engineering-inventory.md",
+      "stages": [
+        "implement",
+        "diagnose",
+        "verify"
+      ],
+      "kind": "original-recipe",
+      "version": "原创方法；参数为假设或原型起点，需项目验证",
+      "source": "project:knowledge/recipes/engineering-inventory.md",
+      "updatedAt": "2026-11-08",
+      "verification": {
+        "status": "recipe-not-runtime-tested",
+        "checkedAt": "2026-11-08",
+        "note": "算例与方法用于讨论；尚未证明适合当前游戏。"
+      }
+    },
+    {
+      "id": "engineering-offline",
+      "category": "engineering",
+      "title": "离线收益与时钟变化",
+      "tags": [
+        "离线",
+        "后台",
+        "时间",
+        "时钟",
+        "补算",
+        "挂机",
+        "offline"
+      ],
+      "content": "离线收益是明确范围决定。计算前定义时间来源、最大补算时长和异常时钟规则，不默认把暂停时间都计入收益。",
+      "bodyPath": "recipes/engineering-offline.md",
+      "stages": [
+        "implement",
+        "diagnose",
+        "verify"
+      ],
+      "kind": "original-recipe",
+      "version": "原创方法；参数为假设或原型起点，需项目验证",
+      "source": "project:knowledge/recipes/engineering-offline.md",
+      "updatedAt": "2026-11-08",
+      "verification": {
+        "status": "recipe-not-runtime-tested",
+        "checkedAt": "2026-11-08",
+        "note": "算例与方法用于讨论；尚未证明适合当前游戏。"
+      }
+    },
+    {
+      "id": "engineering-data-validation",
+      "category": "engineering",
+      "title": "配置表、类型校验与存档迁移",
+      "tags": [
+        "配置表",
+        "CSV",
+        "JSON",
+        "类型",
+        "NaN",
+        "溢出",
+        "迁移",
+        "旧版本",
+        "schema"
+      ],
+      "content": "输入数据先解析再校验，验证成功前不修改当前状态。缺失、非法、未来版本和允许默认值分别处理。",
+      "bodyPath": "recipes/engineering-data-validation.md",
+      "stages": [
+        "implement",
+        "diagnose",
+        "verify"
+      ],
+      "kind": "original-recipe",
+      "version": "原创方法；参数为假设或原型起点，需项目验证",
+      "source": "project:knowledge/recipes/engineering-data-validation.md",
+      "updatedAt": "2026-11-08",
+      "verification": {
+        "status": "recipe-not-runtime-tested",
+        "checkedAt": "2026-11-08",
+        "note": "算例与方法用于讨论；尚未证明适合当前游戏。"
+      }
+    },
+    {
+      "id": "feel-buffer",
+      "category": "feel",
+      "title": "输入缓冲与离地宽限",
+      "tags": [
+        "输入缓冲",
+        "提前按",
+        "跳不出来",
+        "土狼时间",
+        "离地宽限",
+        "coyote",
+        "buffer"
+      ],
+      "content": "提前按跳跃与刚离开平台的失误是两个窗口。按时间定义并分别验证，不把缓冲直接做成额外二段跳。",
+      "bodyPath": "recipes/feel-buffer.md",
+      "stages": [
+        "implement",
+        "diagnose",
+        "verify"
+      ],
+      "kind": "original-recipe",
+      "version": "原创方法；参数为假设或原型起点，需项目验证",
+      "source": "project:knowledge/recipes/feel-buffer.md",
+      "updatedAt": "2026-11-08",
+      "verification": {
+        "status": "recipe-not-runtime-tested",
+        "checkedAt": "2026-11-08",
+        "note": "算例与方法用于讨论；尚未证明适合当前游戏。"
+      }
+    },
+    {
+      "id": "feel-motion-feedback",
+      "category": "feel",
+      "title": "受击停顿、镜头震动与反馈时序",
+      "tags": [
+        "受击",
+        "打击感",
+        "停顿",
+        "hitstop",
+        "震屏",
+        "屏幕抖动",
+        "命中反馈"
+      ],
+      "content": "先保证命中和伤害时序正确，再分别调整停顿、闪白、音效与镜头。所有效果不应反向改变结算次数。",
+      "bodyPath": "recipes/feel-motion-feedback.md",
+      "stages": [
+        "implement",
+        "diagnose",
+        "verify"
+      ],
+      "kind": "original-recipe",
+      "version": "原创方法；参数为假设或原型起点，需项目验证",
+      "source": "project:knowledge/recipes/feel-motion-feedback.md",
+      "updatedAt": "2026-11-08",
+      "verification": {
+        "status": "recipe-not-runtime-tested",
+        "checkedAt": "2026-11-08",
+        "note": "算例与方法用于讨论；尚未证明适合当前游戏。"
+      }
+    },
+    {
+      "id": "feel-frame-independence",
+      "category": "feel",
+      "title": "不同帧率下的移动与平滑",
+      "tags": [
+        "帧率",
+        "delta",
+        "速度不一样",
+        "插值",
+        "平滑",
+        "30fps",
+        "144fps",
+        "时间步"
+      ],
+      "content": "以秒定义运动和反馈，避免每帧固定累加。指数平滑可以用 alpha=1-exp(-k*delta)，并明确暂停与大时间步策略。",
+      "bodyPath": "recipes/feel-frame-independence.md",
+      "stages": [
+        "implement",
+        "diagnose",
+        "verify"
+      ],
+      "kind": "original-recipe",
+      "version": "原创方法；参数为假设或原型起点，需项目验证",
+      "source": "project:knowledge/recipes/feel-frame-independence.md",
+      "updatedAt": "2026-11-08",
+      "verification": {
+        "status": "recipe-not-runtime-tested",
+        "checkedAt": "2026-11-08",
+        "note": "算例与方法用于讨论；尚未证明适合当前游戏。"
+      }
+    },
+    {
+      "id": "production-milestones",
+      "category": "production",
+      "title": "里程碑、风险原型与范围切分",
+      "tags": [
+        "里程碑",
+        "排期",
+        "时间",
+        "做不完",
+        "范围",
+        "阶段",
+        "垂直切片",
+        "计划"
+      ],
+      "content": "先做能淘汰错误方向的风险原型，再做贯通体验的切片。任务以可观察结果收尾，时间估计注明未知项。",
+      "bodyPath": "recipes/production-milestones.md",
+      "stages": [
+        "plan",
+        "implement",
+        "verify",
+        "finish"
+      ],
+      "kind": "original-recipe",
+      "version": "原创方法；参数为假设或原型起点，需项目验证",
+      "source": "project:knowledge/recipes/production-milestones.md",
+      "updatedAt": "2026-11-08",
+      "verification": {
+        "status": "recipe-not-runtime-tested",
+        "checkedAt": "2026-11-08",
+        "note": "算例与方法用于讨论；尚未证明适合当前游戏。"
+      }
+    },
+    {
+      "id": "production-release",
+      "category": "production",
+      "title": "发布前检查与导出失败定位",
+      "tags": [
+        "发布",
+        "打包",
+        "导出",
+        "模板",
+        "发行",
+        "启动失败",
+        "Web",
+        "Android",
+        "构建",
+        "重启",
+        "宿主",
+        "状态待确认",
+        "模板缺失"
+      ],
+      "source": "https://docs.godotengine.org/en/stable/tutorials/export/exporting_projects.html",
+      "content": "先确认目标平台、引擎版本、模板和工具链；导出成功后还需在独立包里验证资源、输入和存档。 工作台重启后构建还在运行或状态未知时不重复启动；失败也要读取文件日志，区分产物生成和可玩验证。",
+      "bodyPath": "recipes/production-release.md",
+      "stages": [
+        "plan",
+        "implement",
+        "verify",
+        "finish",
+        "diagnose"
+      ],
+      "kind": "official-summary-and-recipe",
+      "version": "Godot 4.x 机制；具体 API 以本机版本查证为准",
+      "updatedAt": "2026-11-09",
+      "verification": {
+        "status": "source-reviewed",
+        "checkedAt": "2026-11-08",
+        "note": "已查阅链接的官方机制说明；后续步骤与数值为原创项目建议，不代表官方最佳值。 2026-11-09补充本工作台故障记录与恢复边界；个别样例通过不等于跨项目稳定性保证。"
+      }
+    },
+    {
+      "id": "production-bugfix",
+      "category": "production",
+      "title": "最小复现、根因与局部修复",
+      "tags": [
+        "报错",
+        "救火",
+        "修bug",
+        "崩溃",
+        "复现",
+        "定位",
+        "文件行号",
+        "重写",
+        "闪退",
+        "间歇",
+        "重试",
+        "异常退出",
+        "退出码",
+        "0xC0000005",
+        "native crash"
+      ],
+      "content": "从真实报错、文件版本和复现步骤定位，先缩小到最小失败路径。给局部修复与结构调整两条路及代价。 同样代码第二次运行成功不能覆盖首次失败。导出后闪退先保留退出码和文件日志，按假设固定最小复现或单变量对照，不能凭错误码归因。",
+      "bodyPath": "recipes/production-bugfix.md",
+      "stages": [
+        "plan",
+        "implement",
+        "verify",
+        "finish",
+        "diagnose"
+      ],
+      "kind": "original-recipe",
+      "version": "原创方法；参数为假设或原型起点，需项目验证",
+      "source": "project:knowledge/recipes/production-bugfix.md",
+      "updatedAt": "2026-11-09",
+      "verification": {
+        "status": "recipe-not-runtime-tested",
+        "checkedAt": "2026-11-08",
+        "note": "算例与方法用于讨论；尚未证明适合当前游戏。 2026-11-09补充本工作台故障记录与恢复边界；个别样例通过不等于跨项目稳定性保证。"
+      }
+    },
+    {
+      "id": "production-assets",
+      "category": "production",
+      "title": "素材接入、可替换占位与来源记录",
+      "tags": [
+        "素材",
+        "美术",
+        "占位图",
+        "生图",
+        "资源导入",
+        "字体",
+        "音频",
+        "命名"
+      ],
+      "content": "先定义尺寸、锚点、格式和替换接口，再生成或采购素材。保留来源与用途记录，不让临时素材绑死场景。",
+      "bodyPath": "recipes/production-assets.md",
+      "stages": [
+        "plan",
+        "implement",
+        "verify",
+        "finish"
+      ],
+      "kind": "original-recipe",
+      "version": "原创方法；参数为假设或原型起点，需项目验证",
+      "source": "project:knowledge/recipes/production-assets.md",
+      "updatedAt": "2026-11-08",
+      "verification": {
+        "status": "recipe-not-runtime-tested",
+        "checkedAt": "2026-11-08",
+        "note": "算例与方法用于讨论；尚未证明适合当前游戏。"
+      }
+    },
+    {
+      "id": "engineering-multiplayer-scope",
+      "category": "engineering",
+      "title": "小规模合作与联网范围",
+      "tags": [
+        "联机",
+        "联网",
+        "多人",
+        "合作",
+        "局域网",
+        "房主",
+        "权威",
+        "服务器",
+        "匹配",
+        "中继",
+        "ENet",
+        "multiplayer"
+      ],
+      "stages": [
+        "intake",
+        "plan",
+        "implement",
+        "diagnose"
+      ],
+      "kind": "official-summary-and-recipe",
+      "version": "Godot 4.x；文档核对4.7，部署取舍为建议",
+      "source": "https://docs.godotengine.org/en/4.7/tutorials/networking/high_level_multiplayer.html",
+      "content": "区分状态权威与独立服务器部署。熟人局域网合作可比较房主结算与独立进程；匹配、穿透、中继、账号、持久化和反作弊按网络及产品条件评估，不是所有公开发布的必需清单。未跑联网实验不得声称能力已验证。",
+      "updatedAt": "2026-11-09",
+      "verification": {
+        "status": "source-reviewed",
+        "checkedAt": "2026-11-09",
+        "note": "已查阅官方高层多人和专用服务端导出文档。来自真实评审失败样例的建议整理，尚未通过实际联网或新增配方模型效果验证。"
+      },
+      "bodyPath": "recipes/engineering-multiplayer-scope.md"
+    }
+  ]
+}

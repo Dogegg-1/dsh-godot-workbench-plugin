@@ -1,0 +1,7 @@
+# Native installation starts in an isolated empty space under the active profile.
+# Existing DSH profiles supply tools and systemPrompt.
+- insert:
+    - id: godot-game-workbench
+      name: '@xingyou/godot-workbench'
+      disabled: false
+      config: {}

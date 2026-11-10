@@ -1,0 +1,51 @@
+{
+  "name": "@xingyou/godot-workbench",
+  "version": "0.1.1",
+  "description": "Local Godot planning, knowledge and diagnosis tools for DeepSeek Harness",
+  "type": "module",
+  "exports": {
+    ".": "./src/dsh-plugin.mjs",
+    "./core": "./src/workbench.mjs",
+    "./client": "./dist/client.js",
+    "./package.json": "./package.json",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./locale/*.json": "./src/locale/*.json"
+  },
+  "engines": {
+    "node": ">=22",
+    "dsh": "0.2.1-rc.2"
+  },
+  "dsh": {
+    "manifestVersion": 1,
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-layout",
+        "@deepseek-ai/dsh-client-ui-workspace",
+        "@deepseek-ai/dsh-client-ui-conversation",
+        "@deepseek-ai/dsh-client-ui-theme",
+        "@deepseek-ai/dsh-api-session-controller",
+        "@deepseek-ai/dsh-api-workspace-controller"
+      ]
+    }
+  },
+  "peerDependencies": {
+    "@deepseek-ai/dsh-tools": "0.2.1-rc.2"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/dsh-tools": {
+      "optional": true
+    }
+  },
+  "homepage": "https://github.com/Dogegg-1/dsh-godot-workbench-plugin",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Dogegg-1/dsh-godot-workbench-plugin.git"
+  },
+  "os": [
+    "win32"
+  ]
+}
