@@ -1,0 +1,89 @@
+{
+  "format": 1,
+  "title": {
+    "en": "Xingyou plugins",
+    "zh": "星游集插件"
+  },
+  "plugins": [
+    {
+      "name": "@xingyou/godot-workbench",
+      "title": {
+        "en": "Game Development Workbench",
+        "zh": "游戏开发工作台"
+      },
+      "description": {
+        "en": "Plan, build and validate Godot games in DeepSeek Harness.",
+        "zh": "在 DeepSeek Harness 里规划、制作和验证 Godot 游戏。"
+      },
+      "author": "星游集",
+      "homepage": "https://github.com/Dogegg-1/dsh-godot-workbench-plugin",
+      "repository": {
+        "url": "https://github.com/Dogegg-1/dsh-godot-workbench-plugin"
+      },
+      "versions": [
+        {
+          "version": "0.1.5",
+          "publishTimestamp": 1794348627,
+          "source": {
+            "type": "git",
+            "url": "https://github.com/Dogegg-1/dsh-godot-workbench-plugin",
+            "commit": "8cbbf4293be10476ef8602394ba7603980f03bbb"
+          },
+          "engines": {
+            "node": ">=22",
+            "dsh": "0.2.1-rc.2 || 0.2.1-rc.3 || 0.2.2-rc.1"
+          }
+        },
+        {
+          "version": "0.1.4",
+          "publishTimestamp": 1794345825,
+          "source": {
+            "type": "git",
+            "url": "https://github.com/Dogegg-1/dsh-godot-workbench-plugin",
+            "commit": "910fd0875c70b03f03aebd6f55212aedca54e346"
+          },
+          "engines": {
+            "node": ">=22",
+            "dsh": "0.2.1-rc.2 || 0.2.1-rc.3 || 0.2.2-rc.1"
+          }
+        },
+        {
+          "version": "0.1.3",
+          "publishTimestamp": 1794314816,
+          "source": {
+            "type": "git",
+            "url": "https://github.com/Dogegg-1/dsh-godot-workbench-plugin",
+            "commit": "c0875b5e0b1a7cf480fdddbc324288f74a9c2fa4"
+          },
+          "engines": {
+            "dsh": "0.2.1-rc.2 || 0.2.1-rc.3"
+          }
+        },
+        {
+          "version": "0.1.2",
+          "publishTimestamp": 1794313547,
+          "source": {
+            "type": "git",
+            "url": "https://github.com/Dogegg-1/dsh-godot-workbench-plugin",
+            "commit": "c3968f12b346fb0faa02898ed047956c662cd782"
+          },
+          "engines": {
+            "dsh": "0.2.1-rc.2 || 0.2.1-rc.3"
+          }
+        },
+        {
+          "version": "0.1.1",
+          "publishTimestamp": 1794302234,
+          "source": {
+            "type": "git",
+            "url": "https://github.com/Dogegg-1/dsh-godot-workbench-plugin",
+            "commit": "5b9984de198e0600488a8f6731d99327cdc10ef8"
+          },
+          "engines": {
+            "dsh": "0.2.1-rc.2"
+          }
+        }
+      ]
+    }
+  ]
+}
