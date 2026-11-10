@@ -52,14 +52,15 @@ export function registerWorkbench(ctx, config, defineTool, controller) {
     throw fault('INVALID_ACTION', '未知新建项目操作');
   });
   ctx.systemPrompt.section({ name: 'godot-workbench-runtime-result', order: 59, interpolate: false, text: '运行观测收尾默认不超过180字、三句话：本次实际验证结论；一个最小下一步；必要的未覆盖边界。详细步骤、截图和日志留在工作台依据中，不在对话重贴，不展示请求ID、内部字段或绝对临时路径。步骤数量包含等待和截图，不能称为同等数量的功能断言。属性值、图片附件成功读取和真正的视觉判断分别核对；无法确认图像内容时只说已取得截图，不能凭节点文本推断布局或清晰度。帧数等待不等于准确秒数，不能据此宣称精确产率测试通过。只给一个下一步，不同时展开多个后续任务。异常退出（例如访问冲突）必须保留为未解决问题，后一次成功不能覆盖首次失败；previousNativeFailures与stabilityNotice是同一源码和引擎的已有异常记录，仅覆盖当前载入的近期运行摘要；restored表示重启前的记录，不是本次检查。interrupted表示原工作台退出但缺少完整结果，不证明游戏进程已停；unconfirmed表示原宿主状态尚未确认，不自动重发或绕过运行门禁。没有故障栈、明确变更或有效对照时，不归因为环境、驱动或退出阶段，也不称已经修复。不为得到绿灯简化断言或反复重跑；复测前说明要验证的假设、改动或对照，保留每次结果。属性断言通过与进程正常结束分开报告；存在未定位崩溃时，下一步优先定位该问题而非继续加功能，除非用户明确要求先做其他工作。' });
-  tool('gamedev_runtime', '运行可信游戏工程的独立副本并收集实际输入、属性断言和画面依据。action=start 时提供唯一 requestId 和 scenario={size:[宽,高],steps:[{type:sample,frames:60至600,warmupFrames:30至300}|{type:wait,frames:帧数}|{type:click,node:相对节点路径}|{type:key,code:Godot键码,pressed:布尔值,echo:布尔值}|{type:assert,node:节点路径,property:属性名,equals:值}|{type:capture}]}，每步可有简短 label。最多100步，首次失败停止。启动返回运行标识，用 status 观察同一个 id，不因等待重发；evidence 读取完成依据，cancel 取消。不使用桌面全局输入。属性正确不等于视觉正确或好玩，sample步骤采集预热后的真实主循环帧间隔分布，返回分位数和长帧计数；不是GPU耗时、发布包性能或流畅性验收。副本不是操作系统沙箱，只运行可信工程。', {
-    action: { type: 'string', required: true, enum: ['start', 'status', 'evidence', 'cancel'] },
+  tool('gamedev_runtime', '运行可信游戏工程的独立副本并收集实际输入、属性断言和画面依据。action=start 时提供唯一 requestId 和 scenario={size:[宽,高],steps:[{type:sample,frames:60至600,warmupFrames:30至300}|{type:wait,frames:帧数}|{type:click,node:相对节点路径}|{type:key,code:Godot键码,pressed:布尔值,echo:布尔值}|{type:assert,node:节点路径,property:属性名,equals:值}|{type:capture}]}，每步可有简短 label。最多100步，首次失败停止。启动后用 action=wait 和返回的 id 等待同一次运行，每次最多 10 秒。仍为 running 或 cancelling 时继续等待同一 id，等待到点不重发、不取消。status 即时查询；完成后用 evidence 读取依据；cancel 会停止实际运行，仅在确需停止时调用。不使用桌面全局输入。属性正确不等于视觉正确或好玩，sample步骤采集预热后的真实主循环帧间隔分布，返回分位数和长帧计数；不是GPU耗时、发布包性能或流畅性验收。副本不是操作系统沙箱，只运行可信工程。', {
+    action: { type: 'string', required: true, enum: ['start', 'status', 'wait', 'evidence', 'cancel'] },
     requestId: { type: 'string' }, id: { type: 'string' }, scenario: { type: 'object', additionalProperties: true },
-  }, async args => {
+  }, async (args, exec) => {
     const wb = controller?.workbench ?? workbench;
     await observations.restore(wb.root);
     if (args.action === 'start') return observations.start(wb, args);
     if (args.action === 'status') return observations.status(wb.root, args.id);
+    if (args.action === 'wait') return observations.wait(wb.root, args.id, { signal: exec.signal });
     if (args.action === 'evidence') return observations.currentEvidence(wb.root, args.id);
     if (args.action === 'cancel') return observations.cancel(wb.root, args.id);
     throw fault('INVALID_ACTION', '未知运行检查操作');

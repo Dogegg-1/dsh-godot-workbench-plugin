@@ -2,12 +2,14 @@ import os from 'node:os';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { promises as fs } from 'node:fs';
+import { setTimeout as delay } from 'node:timers/promises';
 import { fault, confined, durableRecord } from './storage.mjs';
 import { observeRuntime, validateScenario, runtimeSourceManifest } from './runtime-observation.mjs';
 import { newExecution, executionHealth } from './task-execution.mjs';
 
 const active = job => ['running', 'cancelling'].includes(job.state.status);
 const blocking = job => active(job) || job.state.status === 'unconfirmed';
+const maxWaitMs = 10000;
 const instances = new WeakMap();
 export function runtimeJobs(controller) {
   if (!instances.has(controller)) instances.set(controller, new RuntimeJobs({ persist: true, isolateRuntime: controller.isolateRuntime }));
@@ -122,6 +124,23 @@ export class RuntimeJobs {
     });
   }
   status(root, id) { const job = this.find(root, id); return job ? this.snapshot(job) : null; }
+  async wait(root, id, { timeoutMs = maxWaitMs, signal } = {}) {
+    if (typeof id !== 'string' || !id.trim()) throw fault('INVALID_REQUEST', '等待运行检查需要本次运行标识');
+    if (!Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > maxWaitMs) throw fault('INVALID_REQUEST', '等待时间必须为 1 至 10000 毫秒');
+    signal?.throwIfAborted();
+    const job = this.find(root, id);
+    if (!active(job) || !job.done) return this.snapshot(job);
+
+    const timer = new AbortController();
+    const waitSignal = signal ? AbortSignal.any([signal, timer.signal]) : timer.signal;
+    try {
+      await Promise.race([job.done, delay(timeoutMs, undefined, { signal: waitSignal })]);
+      signal?.throwIfAborted();
+      return this.snapshot(job);
+    } finally {
+      timer.abort();
+    }
+  }
   cancel(root, id) {
     const job = this.find(root, id);
     if (!job) throw fault('RUNTIME_NOT_FOUND', '找不到运行检查');
