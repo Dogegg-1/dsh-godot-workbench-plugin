@@ -8,9 +8,27 @@ import { inspectExportReadiness } from './export-readiness.mjs';
 import { runtimeHealth } from './runtime-health.mjs';
 import { engineIdentity as identifyEngine } from './engine-identity.mjs';
 
-export const diagnosisContext = state => digest({ plan: state.plan, approval: state.approval, tasks: state.tasks.map(({summaryBasis, ...task})=>task), temporaryFixes: state.temporaryFixes ?? [] });
+function contextFingerprint(state, tasks) {
+  return digest({ plan: state.plan, approval: state.approval, tasks: tasks.map(({ summaryBasis, ...task }) => task), temporaryFixes: state.temporaryFixes ?? [] });
+}
 
-export async function diagnose(root, state, { enginePath, runImport = false, skipEngineReason, signal, checkEngine = checkGodot } = {}) {
+export const diagnosisContext = state => contextFingerprint(state, state.tasks);
+// Queuing work updates the producer report, while an unstarted task has no engineering effects.
+export const taskCheckContext = state => contextFingerprint(state, state.tasks.filter(task => task.status !== 'pending' || task.execution));
+
+export function currentDiagnosis(report, state, snapshot, engineIdentity) {
+  if (!report) return null;
+  const sourceChanged = snapshot.complete ? report.fingerprint !== snapshot.fingerprint : null;
+  const inputsCurrent = !report.stale && sourceChanged === false;
+  const stale = !inputsCurrent || report.workflowFingerprint !== diagnosisContext(state);
+  const taskCheckCurrent = report.taskCheckFingerprint
+    ? inputsCurrent && Boolean(engineIdentity && engineIdentity !== 'unavailable' && report.engineIdentity === engineIdentity)
+      && report.taskCheckFingerprint === taskCheckContext(state)
+    : !stale;
+  return { ...report, sourceChanged, stale, taskCheckCurrent };
+}
+
+export async function diagnose(root, state, { enginePath, runImport = false, skipEngineReason, isolateRuntime = false, signal, checkEngine = checkGodot } = {}) {
   const engineIdentity = await identifyEngine(enginePath);
   const snapshot = await inspectProject(root);
   const issues = [];
@@ -26,7 +44,7 @@ export async function diagnose(root, state, { enginePath, runImport = false, ski
   const fixes = await listTemporaryFixes(root, state, { includeResolved: false });
   for (const item of fixes.items) add('TEMPORARY_FIX', item.effectiveStatus === 'needs-review' ? `临时修复需要重验：${item.title}` : `临时方案仍在使用：${item.title}`, `原因：${item.reason}。适用范围：${item.scope}。限制：${item.limitations}。`, `先核对移除条件：${item.removalCondition}。后续工作：${item.followUp}。不满足条件时保留记录，不自动扩大范围。`, [{ type: 'temporary-fix', id: item.id, version: item.version }, ...item.paths.map(path => ({ type: 'file', path }))], 'risk', 'warning');
   for (const issue of resources.issues.slice(0, 40)) add(issue.code, issue.code === 'RESOURCE_REFERENCE_MISSING' ? '资源引用需要核对' : '项目参数或资源说明需要修正', issue.message, '在项目资源中核对当前值和引用位置，修正后重新检查；不要删除未发现引用的文件。', [{ type: 'file', path: issue.path, line: issue.line }], issue.category, issue.category === 'risk' ? 'warning' : 'blocking');
-  const planAssessment = assessPlan(state.plan);
+  const planAssessment = assessPlan(state.plan, state.planningPolicy);
   if (!planAssessment.ready) add('PLAN_INCOMPLETE', '开发方案还缺少关键决定', planAssessment.questions.join(' '), '先补齐核心体验、当前范围与验收条件，再展示方案请我确认。', [{ type: 'plan', missing: planAssessment.missing }]);
   else if (!approvalValid(state)) add('PLAN_NOT_CONFIRMED', '当前方案还没有确认', '方案内容已整理，但没有匹配当前版本的用户确认。', '展示当前 GDD 和开发计划，说明范围与验收方式，请我确认后再开发。', [{ type: 'plan', hash: digest(state.plan) }]);
   const currentTasks = state.tasks.filter(task => task.planHash === (state.plan ? digest(state.plan) : null));
@@ -43,7 +61,7 @@ export async function diagnose(root, state, { enginePath, runImport = false, ski
   }
   const engine = skipEngineReason
     ? { status: 'not-checked', reason: `本次仅检查文件，未启动引擎：${skipEngineReason}`, checks: [] }
-    : await checkEngine(enginePath, root, { runImport: runImport && Boolean(project), signal });
+    : await checkEngine(enginePath, root, { runImport: runImport && Boolean(project), signal, ...(isolateRuntime ? { isolateRuntime } : {}) });
   const exportReadiness = await inspectExportReadiness(snapshot, enginePath, engine.version);
   if (engine.status !== 'available' && !skipEngineReason) add('ENGINE_UNAVAILABLE', '暂时无法做引擎运行检查', engine.reason, '先配置可用的 Godot 4 路径，再重新诊断；不要把未运行的检查标成通过。', [{ type: 'engine', status: engine.status }], 'confirmed', 'warning');
   for (const check of engine.checks) if (check.status !== 'passed') {
@@ -57,7 +75,8 @@ export async function diagnose(root, state, { enginePath, runImport = false, ski
   const changedDuringCheck = after.fingerprint !== snapshot.fingerprint;
   if (changedDuringCheck) add('PROJECT_CHANGED', '检查过程中项目内容发生了变化', '本次报告无法证明最新文件版本全部通过。', '读取最新变更后重新检查受影响部分。', [{ type: 'fingerprint', before: snapshot.fingerprint, after: after.fingerprint }], 'confirmed', 'warning');
   return {
-    id: randomUUID(), at: now(), planHash: state.plan ? digest(state.plan) : null, workflowFingerprint: diagnosisContext(state), fingerprint: after.fingerprint,
+    id: randomUUID(), at: now(), planHash: state.plan ? digest(state.plan) : null,
+    workflowFingerprint: diagnosisContext(state), taskCheckFingerprint: taskCheckContext(state), fingerprint: after.fingerprint,
     stale: changedDuringCheck || engineIdentity !== await identifyEngine(enginePath), issues, engine, engineIdentity, exportReadiness,
     producerFacts: { scopeItems: state.plan?.inScope.length ?? 0, tasks: { total: currentTasks.length, failed: failed.length, awaitingReview: currentTasks.filter(t => t.status === 'awaiting-review').length }, note: '任务统计不代表质量或整体完成度' },
     coverage: { fileScan: snapshot.complete ? 'complete' : 'partial', fileScanScope: '配置支持的文本及素材类型；排除缓存、隐藏目录、敏感文件名与常见疑似凭据内容；最多 1000 文件、总计 6 MB、单文件 1 MB', scannedFiles: snapshot.files.length, skipped: snapshot.skipped, engineImport: engine.checks[0]?.status ?? 'not-run', functionalInput: 'not-run', visualReview: 'not-run', humanPlaytest: 'not-run' },

@@ -1,4 +1,4 @@
-import { ProjectController, sameProject } from './project-controller.mjs';
+import { ProjectController, previewProjectImport, sameProject } from './project-controller.mjs';
 import { openGodotEditor } from './editor-launch.mjs';
 import { registerAndRecordGodotProject } from './godot-project-list.mjs';
 import { EngineInstallJobs } from './engine-install-jobs.mjs';
@@ -16,6 +16,7 @@ Object.assign(methods, { lifecycleChange: 'lifecycleChange' });
 Object.assign(methods, { qaRecord: 'qaRecord' });
 Object.assign(methods, { projectLessonExport: 'projectLessonExport', projectLessonInspect: 'projectLessonInspect', projectLessonImport: 'projectLessonImport' });
 const installers = new WeakMap();
+const unrestrictedActions = new Set(['editorOpen', 'engineOffer', 'engineInstallStart']);
 
 // DSH supplies authentication/owner checks. Local preview supplies Host/Origin checks.
 export function createWorkbenchHandler(config, controller = new ProjectController(config), installer) {
@@ -31,10 +32,11 @@ export function createWorkbenchHandler(config, controller = new ProjectControlle
       const raw = await request.text();
       if (raw.length > 22500000) return json({ error: 'TOO_LARGE', message: '请求过长，请拆分内容' }, 413);
       const body = JSON.parse(raw);
-      if (!body || (!Object.hasOwn(methods, body.action) && !['projectManage', 'projectPrepare', 'buildStart', 'buildStatus', 'buildCancel', 'buildEvidence', 'buildOpenFolder', 'runtimeImage', 'runtimeStart', 'runtimeStatus', 'runtimeCancel', 'runtimeEvidence', 'configuration', 'configure', 'editorOpen', 'projectRegister', 'engineOffer', 'engineInstallStart', 'engineInstallStatus', 'engineInstallCancel', 'engineInstallInspect'].includes(body.action))) return json({ error: 'UNKNOWN_ACTION', message: '未知工作台操作' }, 400);
+      if (!body || (!Object.hasOwn(methods, body.action) && !['projectManage', 'projectPrepare', 'projectImportPreview', 'buildStart', 'buildStatus', 'buildCancel', 'buildEvidence', 'buildOpenFolder', 'runtimeImage', 'runtimeStart', 'runtimeStatus', 'runtimeCancel', 'runtimeEvidence', 'configuration', 'configure', 'editorOpen', 'projectRegister', 'engineOffer', 'engineInstallStart', 'engineInstallStatus', 'engineInstallCancel', 'engineInstallInspect'].includes(body.action))) return json({ error: 'UNKNOWN_ACTION', message: '未知工作台操作' }, 400);
       if (body.action !== 'assetImport' && raw.length > 128000) return json({ error: 'TOO_LARGE', message: '请求过长，请拆分内容' }, 413);
       const args = body.args ?? {};
       if (!args || typeof args !== 'object' || Array.isArray(args)) return json({ error: 'INVALID_ARGUMENTS', message: '参数必须是对象' }, 400);
+      if (controller.restrictedProduction && unrestrictedActions.has(body.action)) return json({ error: 'ISOLATION_REQUIRED', message: '此配置请使用受限运行，常规启动与安装暂不可用' }, 400);
       request.signal.throwIfAborted();
       let value;
       if (body.action === 'configuration') value = await controller.configuration();
@@ -47,6 +49,7 @@ export function createWorkbenchHandler(config, controller = new ProjectControlle
         value = await prepareProjectIntake(controller, args);
       }
       else if (body.action === 'projectManage') value = await controller.manageProjects(args);
+      else if (body.action === 'projectImportPreview') value = await controller.use(() => previewProjectImport(args), { expectedProjectRoot: body.expectedProjectRoot, requireBinding: true });
       else if (body.action === 'configure') value = await controller.configure({ ...args, signal: request.signal });
       else if (body.action === 'status') value = await controller.status();
       else if (body.action === 'qaRecord') value = await controller.use(wb=>wb.qaRecord(args,{localUser:true}),{expectedProjectRoot:body.expectedProjectRoot,requireBinding:true});

@@ -1,5 +1,4 @@
 import path from 'node:path';
-import { diagnosisContext } from './diagnostics.mjs';
 import { searchKnowledge } from './knowledge.mjs';
 
 const clip = (value, limit = 400) => String(value ?? '').slice(0, limit);
@@ -13,10 +12,10 @@ export async function buildRuntimeContext(workbench) {
   const current = status.tasks.filter(task => task.currentPlan);
   const active = current.find(task => task.status === 'running') ?? current.find(task => task.status === 'pending');
   const report = status.latestDiagnosis;
-  const diagnosticPending = report && !report.stale && report.aiReview.status === 'pending'
-    && report.workflowFingerprint === diagnosisContext({ plan: status.plan, approval: status.approval, tasks: status.tasks.map(({ currentPlan, canStart, ...task }) => task), temporaryFixes: status.temporaryFixes });
-  const stage = diagnosticPending ? 'diagnose' : status.phase;
-  const query = clip(diagnosticPending ? report.issues.map(issue => issue.title).join(' ') : active ? `${active.title} ${active.acceptance}` : `${status.plan?.coreLoop ?? ''} ${(status.plan?.inScope ?? []).join(' ')}`, 1200);
+  // Optional AI interpretation must not redirect the development conversation.
+  // Explicit diagnosis requests load their own diagnose context via the tool.
+  const stage = status.phase;
+  const query = clip(active ? `${active.title} ${active.acceptance}` : `${status.plan?.coreLoop ?? ''} ${(status.plan?.inScope ?? []).join(' ')}`, 1200);
   const context = await workbench.context({ stage, query, maxChars: 1800 });
   // A matching index hit alone is not enough for implementation: include one
   // bounded built-in recipe for the running task, without loading the whole library.

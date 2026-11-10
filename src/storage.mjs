@@ -1,7 +1,7 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
-import { lifecycleStages, gddSections } from './lifecycle-schema.mjs';
+import { lifecycleStages, gddSections, prototypeBriefPolicy } from './lifecycle-schema.mjs';
 
 export const digest = value => createHash('sha256').update(typeof value === 'string' ? value : JSON.stringify(value)).digest('hex');
 export const now = () => new Date().toISOString();
@@ -11,6 +11,7 @@ export function validateState(state) {
   const object = value => value && typeof value === 'object' && !Array.isArray(value);
   if (!object(state) || state.schemaVersion !== 1 || typeof state.projectId !== 'string' || !state.projectId || !Number.isSafeInteger(state.revision) || state.revision < 0 || !['tasks', 'diagnostics', 'events'].every(key => Array.isArray(state[key])) || (state.plan !== null && !object(state.plan))) throw fault('INVALID_STATE', '工作台记录格式损坏或版本不兼容，请先查看恢复记录；原文件未被覆盖');
   if (state.plan && (!['title', 'concept', 'experience', 'coreLoop', 'platform'].every(key => typeof state.plan[key] === 'string') || !['inScope', 'outOfScope', 'acceptance', 'assumptions', 'blockingQuestions'].every(key => Array.isArray(state.plan[key]) && state.plan[key].every(value => typeof value === 'string')))) throw fault('INVALID_STATE', '方案记录格式不完整，请先核查恢复版本');
+  if (state.planningPolicy !== undefined && state.planningPolicy !== prototypeBriefPolicy) throw fault('INVALID_STATE', '无法识别该项目的开工条件，请核查工作台版本和记录。');
   if (state.tasks.some(task => !object(task) || typeof task.id !== 'string' || typeof task.title !== 'string' || !Array.isArray(task.dependsOn) || !Array.isArray(task.evidence) || !['pending', 'running', 'failed', 'cancelled', 'awaiting-review', 'accepted'].includes(task.status))) throw fault('INVALID_STATE', '任务记录格式不完整，请先核查恢复版本');
   const objects = value => Array.isArray(value) && value.every(object);
   if(state.qaRuns!==undefined&&(!objects(state.qaRuns)||state.qaRuns.some(run=>typeof run.id!=='string'||run.actor!=='local-user'||!object(run.basis)||!objects(run.results)||run.results.some(r=>!Number.isInteger(r.number)||!['passed','failed','not-tested'].includes(r.outcome)||typeof r.note!=='string'||typeof r.target!=='string')))) throw fault('INVALID_STATE','QA记录损坏，请保留记录并核查');
@@ -134,6 +135,7 @@ export class Store {
 }
 
 export function event(state, type, data) {
-  if (['plan-revised', 'plan-confirmed', 'task-created', 'task-start', 'task-submit', 'task-fail', 'task-retry', 'task-reviewed', 'task-cancelled', 'file-changed', 'file-rolled-back', 'temporary-fix-changed'].includes(type)) for (const report of state.diagnostics) report.stale = true;
+  // Queuing changes the report's workflow fingerprint. Keep its separate engineering evidence.
+  if (['plan-revised', 'plan-confirmed', 'task-start', 'task-submit', 'task-fail', 'task-retry', 'task-reviewed', 'task-cancelled', 'file-changed', 'file-rolled-back', 'temporary-fix-changed'].includes(type)) for (const report of state.diagnostics) report.stale = true;
   state.events.push({ id: randomUUID(), at: now(), type, data });
 }

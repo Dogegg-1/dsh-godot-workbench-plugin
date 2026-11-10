@@ -2,9 +2,10 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { createSaveDirectoryProbe, verifySaveDirectory } from './save-directory.mjs';
 import { randomUUID, createHash } from 'node:crypto';
-import { confined, fault } from './storage.mjs';
+import { confined, fault, readRecord } from './storage.mjs';
 import { runProcess } from './project.mjs';
 import { summarizeFrameTimes } from './frame-timing.mjs';
+import { createIsolatedRuntime } from './windows-runtime-isolation.mjs';
 
 const excluded = new Set(['.git', '.godot', '.game-workbench', 'node_modules', 'logs', 'tmp', 'export', 'build']);
 const omit = name => excluded.has(name) || name.startsWith('.') || /credential|secret|password|token/i.test(name);
@@ -17,8 +18,9 @@ export async function runtimeSourceManifest(root) {
       const relative = path.posix.join(dir, entry.name); const file = await confined(root, relative);
       if (entry.isDirectory()) await walk(relative);
       else {
-        if (!entry.isFile()) throw fault('UNSUPPORTED_FILE', '观测不支持特殊文件');
-        bytes += (await fs.stat(file)).size;
+        const stat = await fs.lstat(file);
+        if (!stat.isFile() || stat.nlink !== 1) throw fault('UNSUPPORTED_FILE', '观测不支持链接或特殊文件');
+        bytes += stat.size;
         if (bytes > 256_000_000 || files.length >= 10000) throw fault('COPY_LIMIT', '工程超出观测容量');
         files.push({ path: relative, hash: hash(await fs.readFile(file)) });
       }
@@ -62,7 +64,16 @@ export function validateScenario(input) {
   return { size, steps };
 }
 
-export function runtimeIssues(output) {
+const isolationNotices = [
+  ['ERROR: Condition "res != ((HRESULT)0x00000000)" is true. Returning: String()', 'at: get_system_dir (platform/windows/os_windows.cpp:2502)', 4],
+  ['ERROR: Call to GetAdaptersAddresses failed with error 5.', 'at: get_local_interfaces (drivers/windows/ip_windows.cpp:117)', 1],
+  ['ERROR: Method/function failed. Returning: ""', 'at: get_filesystem_type (drivers/windows/dir_access_windows.cpp:412)', 2],
+  ['ERROR: Failed to read the root certificate store.', 'at: get_system_ca_certificates (platform/windows/os_windows.cpp:2582)', 1],
+  ['ERROR: Condition "_sock == (SOCKET)(~0)" is true. Returning: FAILED', 'at: open (drivers/windows/net_socket_winsock.cpp:238)', 2],
+  ['ERROR: Condition "err != OK" is true. Returning: ERR_CANT_CREATE', 'at: listen (core/io/tcp_server.cpp:56)', 2],
+];
+
+export function runtimeIssues(output, { isolateRuntime = false } = {}) {
   const issues = []; let current;
   for (const line of output.split(/\r?\n/)) {
     if (/^(?:SCRIPT ERROR:|ERROR:|WARNING:)/.test(line)) {
@@ -76,11 +87,18 @@ export function runtimeIssues(output) {
     if (previous) { previous.count++; previous.lastOccurrence = index; }
     else groups.set(key, { ...issue, count: 1, firstOccurrence: index, lastOccurrence: index });
   });
-  return [...groups.values()];
+  const unique = [...groups.values()];
+  // LPAC denies some optional engine services during startup. Keep the logs,
+  // and downgrade only the exact, bounded messages observed on this build.
+  if (!isolateRuntime || !/^Godot Engine v4\.7\.2\.stable\.official\.ed1daf0bf\b/m.test(output)) return unique;
+  return unique.map(issue => {
+    const known = issue.stack.length === 1 && isolationNotices.some(([message, frame, maximum]) =>
+      issue.message === message && issue.stack[0].trim() === frame && issue.count <= maximum);
+    return known ? { ...issue, severity: 'warning', kind: 'isolation-notice' } : issue;
+  });
 }
 
-// A separate copy and user:// directory protect ordinary game data, not an OS sandbox.
-export async function observeRuntime({ projectRoot, engine, outputParent, scenario, signal }) {
+export async function observeRuntime({ projectRoot, engine, outputParent, scenario, signal, isolateRuntime = false }) {
   const normalized = validateScenario(scenario);
   signal?.throwIfAborted();
   if (!path.isAbsolute(engine)) throw fault('INVALID_ENGINE', '需要 Godot 完整路径');
@@ -98,8 +116,9 @@ export async function observeRuntime({ projectRoot, engine, outputParent, scenar
       const from = await confined(source, relativeFile); const to = path.join(game, relativeFile);
       if (entry.isDirectory()) { await fs.mkdir(to); await copy(relativeFile); }
       else {
-        if (!entry.isFile()) throw fault('UNSUPPORTED_FILE', '观测副本不支持链接或特殊文件');
-        const stat = await fs.stat(from); bytes += stat.size; files++;
+        const stat = await fs.lstat(from);
+        if (!stat.isFile() || stat.nlink !== 1) throw fault('UNSUPPORTED_FILE', '观测副本不支持链接或特殊文件');
+        bytes += stat.size; files++;
         if (bytes > 256_000_000 || files > 10000) throw fault('COPY_LIMIT', '工程超出本版观测副本容量，请缩小验证工程');
         const content = await fs.readFile(from);
         await fs.writeFile(to, content, { flag: 'wx' });
@@ -108,25 +127,27 @@ export async function observeRuntime({ projectRoot, engine, outputParent, scenar
     }
   }
   await copy(); await fs.access(path.join(game, 'project.godot'));
+  const run = isolateRuntime ? await createIsolatedRuntime({ root, engine, signal }) : runProcess;
   // Never overwrite an existing override: it could contain essential project settings.
   const id = randomUUID(); const harness = `dsh_observe_${id.replaceAll('-', '')}`;
   await fs.writeFile(path.join(game, 'override.cfg'), `[application]\nconfig/use_custom_user_dir=true\nconfig/custom_user_dir_name="dsh-workbench-tests/${id}"\n`, { flag: 'wx' });
   const saveProbe = await createSaveDirectoryProbe(game);
   let saveDirectory;
-  try { saveDirectory = await verifySaveDirectory({ executable: engine, project: game, script: saveProbe, expected: `dsh-workbench-tests/${id}`, signal }); }
+  try { saveDirectory = await verifySaveDirectory({ executable: engine, project: game, script: saveProbe, expected: `dsh-workbench-tests/${id}`, signal, run, containedIn: isolateRuntime ? game : undefined }); }
   catch (error) { await fs.writeFile(path.join(root, 'save-directory.json'), JSON.stringify(error.evidence ?? { message: error.message }, null, 2)); throw error; }
   await fs.writeFile(path.join(root, 'save-directory.json'), JSON.stringify(saveDirectory, null, 2));
   await fs.mkdir(path.join(game, harness));
   await fs.copyFile(new URL('./runtime-runner.gd', import.meta.url), path.join(game, harness, 'runner.gd'));
   await fs.writeFile(path.join(game, harness, 'scenario.json'), JSON.stringify(normalized));
-  const imported = await runProcess(engine, ['--headless', '--path', game, '--editor', '--import'], { cwd: game, signal, timeoutMs: 60000 });
-  const importIssues = runtimeIssues(`${imported.stdout}\n${imported.stderr}`);
+  const imported = await run(engine, ['--headless', '--path', game, '--editor', '--import'], { cwd: game, signal, timeoutMs: 60000 });
+  const importIssues = runtimeIssues(`${imported.stdout}\n${imported.stderr}`, { isolateRuntime: imported.sandbox === 'windows-lpac' });
   let execution = null, observations = null;
   if (imported.exitCode === 0 && !imported.timedOut && !imported.truncated && !importIssues.some(i => i.severity === 'error')) {
     // Let Godot use the project's renderer and its own supported fallback.
     // Forcing Compatibility here could hide Forward+/Mobile rendering defects.
-    execution = await runProcess(engine, ['--path', game, '--resolution', normalized.size.join('x'), '--script', `res://${harness}/runner.gd`], { cwd: game, signal, timeoutMs: 60000 });
-    try { observations = JSON.parse(await fs.readFile(path.join(game, harness, 'result.json'), 'utf8')); } catch (error) { if (error.code !== 'ENOENT') throw error; }
+    execution = await run(engine, ['--path', game, '--resolution', normalized.size.join('x'), '--script', `res://${harness}/runner.gd`], { cwd: game, signal, timeoutMs: 60000, windowed: true });
+    const { raw } = await readRecord(root, `game/${harness}/result.json`, 2_000_000);
+    if (raw) observations = JSON.parse(raw.toString('utf8'));
     for (const step of observations?.steps ?? []) if (step.image) {
       if (!/^frame-\d{3}\.png$/.test(step.image)) throw fault('INVALID_EVIDENCE', '运行返回了无效画面路径');
       await confined(root, `game/${harness}/${step.image}`);
@@ -142,7 +163,14 @@ export async function observeRuntime({ projectRoot, engine, outputParent, scenar
   }
   const passed = Boolean(execution?.exitCode === 0 && !execution.timedOut && !execution.truncated && observations?.complete && observations.steps.length === normalized.steps.length && observations.steps.every(s => s.passed) && !issues.some(i => i.severity === 'error'));
   const hasAssertions = normalized.steps.some(step => step.type === 'assert');
-  const result = { passed, conclusion: passed ? hasAssertions ? '本次操作和属性检查通过，请查看画面确认显示效果。' : '已启动并完成本次观测，尚未检查具体玩法。' : '本次运行检查未通过，请查看失败步骤和运行日志。', root, sourceManifest: sourceManifest.sort((a, b) => a.path.localeCompare(b.path)), copiedFiles: files, imported, importIssues, execution, issues, observations, humanPlaytest: false, frameTiming: timing.length ? timing : 'not-measured', sandbox: false };
+  const nativeExit = execution?.exitCode >>> 0;
+  const failedConclusion = isolateRuntime && !observations && nativeExit >= 0xc0000000
+    ? `受限游戏窗口启动时提前退出（0x${nativeExit.toString(16).toUpperCase()}），没有收到点击或画面依据。`
+    : '本次运行检查未通过，请查看失败步骤和运行日志。';
+  const passedConclusion = hasAssertions ? '本次操作和属性检查通过，请查看画面确认显示效果。' : '已启动并完成本次观测，尚未检查具体玩法。';
+  const result = { passed, conclusion: passed ? passedConclusion : failedConclusion, root,
+    sourceManifest: sourceManifest.sort((a, b) => a.path.localeCompare(b.path)), copiedFiles: files,
+    imported, importIssues, execution, issues, observations, humanPlaytest: false, frameTiming: timing.length ? timing : 'not-measured', sandbox: isolateRuntime };
   await fs.writeFile(path.join(root, 'report.json'), JSON.stringify(result, null, 2));
   return result;
 }

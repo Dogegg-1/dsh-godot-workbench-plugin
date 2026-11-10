@@ -13,12 +13,13 @@ const instances = new WeakMap();
 const active = job => ['running', 'cancelling'].includes(job.state.status);
 const blocking = job => active(job) || job.state.status === 'unconfirmed';
 export function buildJobs(controller) {
-  if (!instances.has(controller)) instances.set(controller, new BuildJobs({ directory: path.join(controller.settingsPath ? path.dirname(controller.settingsPath) : os.tmpdir(), 'dsh-playable-builds') }));
+  if (!instances.has(controller)) instances.set(controller, new BuildJobs({ directory: path.join(controller.settingsPath ? path.dirname(controller.settingsPath) : os.tmpdir(), 'dsh-playable-builds'), isolateRuntime: controller.restrictedProduction === true }));
   return instances.get(controller);
 }
 export class BuildJobs {
-  constructor({ directory, build = buildPlayable } = {}) {
+  constructor({ directory, build = buildPlayable, isolateRuntime = false } = {}) {
     this.directory = path.resolve(directory); this.build = build; this.jobs = new Map();
+    this.isolateRuntime = isolateRuntime;
     this.ready = this.load(); this.ready.catch(() => {});
   }
   async load() {
@@ -59,16 +60,19 @@ export class BuildJobs {
     if (!wb.enginePath) throw fault('ENGINE_REQUIRED', '请先配置 Godot');
     if (typeof requestId !== 'string' || !/^[\w-]{8,80}$/.test(requestId)) throw fault('INVALID_REQUEST', '构建请求标识无效');
     for (const job of this.jobs.values()) if (job.root === wb.root && job.requestId === requestId) {
-      if (job.engine !== wb.enginePath || (job.state.graphics ?? 'project') !== graphics) throw fault('REQUEST_CONFLICT', '同一请求的引擎或图形设置已改变，请重新发起');
+      if (job.engine !== wb.enginePath || (job.state.graphics ?? 'project') !== graphics || Boolean(job.state.isolated) !== this.isolateRuntime) throw fault('REQUEST_CONFLICT', '同一请求的引擎、图形设置或执行边界已改变，请重新发起');
+      if (!active(job) && job.done) await job.done;
       return this.snapshot(job);
     }
     if ([...this.jobs.values()].some(blocking)) throw fault('BUILD_BUSY', '已有构建正在执行或尚无法确认结束，请先查看原窗口的结果');
-    const job = { root: wb.root, engine: wb.enginePath, owner: newExecution(), requestId, abort: new AbortController(), saves: Promise.resolve(), state: { graphics, id: randomUUID(), projectRoot: wb.root, status: 'running', phase: 'checking', startedAt: new Date().toISOString(), exportPassed: false, startupPassed: false, humanPlaytest: false } };
+    const job = { root: wb.root, engine: wb.enginePath, owner: newExecution(), requestId, abort: new AbortController(), saves: Promise.resolve(), state: { graphics, id: randomUUID(), projectRoot: wb.root, status: 'running', phase: 'checking', startedAt: new Date().toISOString(), exportPassed: false, startupPassed: false, humanPlaytest: false, ...(this.isolateRuntime ? { isolated: true } : {}) } };
     this.jobs.set(job.state.id, job);
     try { await this.persist(job); } catch (error) { this.jobs.delete(job.state.id); throw error; }
-    job.done = Promise.resolve().then(() => this.build({ projectRoot: job.root, engine: job.engine, graphics: job.state.graphics, outputParent: this.directory, signal: job.abort.signal, onProgress: value => { job.state.phase = value.phase; this.persist(job).catch(() => {}); } })).then(report => {
+    job.done = Promise.resolve().then(() => this.build({ projectRoot: job.root, engine: job.engine, graphics: job.state.graphics, outputParent: this.directory, signal: job.abort.signal, ...(this.isolateRuntime ? { isolateRuntime: true } : {}), onProgress: value => { job.state.phase = value.phase; this.persist(job).catch(() => {}); } })).then(report => {
       job.resultDirectory = path.relative(this.directory, report.root);
-      job.state = { ...job.state, status: job.abort.signal.aborted ? 'cancelled' : report.status, exportPassed: report.exportPassed, startupPassed: report.startupPassed, saveIsolationVerified: report.checks?.packedSaveDirectory?.verified === true, code: report.error?.code, message: report.error?.message ?? '试玩包已生成并完成自动启动检查。', output: report.output, sourceState: report.sourceState, hasEvidence: true };
+      const status = job.abort.signal.aborted ? 'cancelled' : report.status;
+      job.state = { ...job.state, status, exportPassed: report.exportPassed, startupPassed: report.startupPassed, saveIsolationVerified: report.checks?.packedSaveDirectory?.verified === true, code: report.error?.code, message: report.error?.message ?? '试玩包已生成并完成自动启动检查。', output: report.output, sourceState: report.sourceState, hasEvidence: true };
+      if (status === 'failed' && report.compatibilityRetry === true) job.state.compatibilityRetry = true;
     }, error => { job.state.status = job.abort.signal.aborted ? 'cancelled' : 'failed'; job.state.message = error.message; job.state.code = error.code ?? 'BUILD_FAILED'; }).finally(async () => {
       job.state.finishedAt = new Date().toISOString();
       try { await this.persist(job); } catch { job.state.status = 'record-failed'; job.state.message = '构建结果未能保存，请保留产物并核查记录目录。'; }
@@ -78,8 +82,11 @@ export class BuildJobs {
   async find(root, id) {
     await this.ready;
     if ([...this.jobs.values()].some(job => job.state.status === 'unconfirmed')) await this.load();
-    const job = id ? this.jobs.get(id) : [...this.jobs.values()].filter(item => item.root === root).sort((a, b) => a.state.startedAt.localeCompare(b.state.startedAt)).at(-1);
+    const job = id ? this.jobs.get(id) : [...this.jobs.values()].filter(item => item.root === root && (!this.isolateRuntime || item.state.isolated === true)).sort((a, b) => a.state.startedAt.localeCompare(b.state.startedAt)).at(-1);
     if (id && (!job || job.root !== root)) throw fault('BUILD_NOT_FOUND', '找不到此项目的构建记录');
+    // Once execution reaches a terminal state, expose it only after the last
+    // write has settled so an immediate reopen sees the same build ID and result.
+    if (job && !active(job) && job.done) await job.done;
     return job ?? null;
   }
   async status(root, id) { const job = await this.find(root, id); return job ? this.snapshot(job) : null; }
@@ -103,7 +110,8 @@ export class BuildJobs {
     let sourceState = 'unknown';
     try { sourceState = JSON.stringify(await runtimeSourceManifest(root)) === JSON.stringify(report.sourceManifest) ? 'unchanged' : 'changed'; } catch {}
     const checks = Object.fromEntries(Object.entries(report.checks).map(([name, check]) => [name, { ...check, stdout: check.stdout?.slice(0, 16000), stderr: check.stderr?.slice(0, 16000), fileLog: check.fileLog?.slice(0, 16000), displayTruncated: Boolean(check.fileLogTruncated || [check.stdout, check.stderr, check.fileLog].some(text => text?.length > 16000)) }]));
-    return { ...this.snapshot(job), sourceState, checks, failure: classifyBuildFailure(report), artifacts: report.artifacts, limitations: report.limitations, engineVersion: report.engineVersion };
+    return { ...this.snapshot(job), sourceState, checks, failure: classifyBuildFailure(report), artifacts: report.artifacts, limitations: report.limitations, engineVersion: report.engineVersion,
+      ...(report.isolation ? { isolation: report.isolation, template: report.template } : {}) };
   }
   async verifyDelivery(root, id) {
     if (typeof id !== 'string' || !id) throw fault('DELIVERY_REQUIRED', '请先选择本次验收的试玩包');
@@ -114,6 +122,10 @@ export class BuildJobs {
   }
   async verifiedOutput(root, id) {
     const { job, report, folder } = await this.report(root, id);
+    if (this.isolateRuntime && (job.state.isolated !== true || job.state.status !== 'ready' || report.startupPassed !== true ||
+      ['saveDirectory', 'import', 'export', 'packedSaveDirectory'].some(phase => report.checks?.[phase]?.sandbox !== 'windows-lpac') || report.checks?.startup?.sandbox !== 'windows-appcontainer')) {
+      throw fault('ISOLATION_REQUIRED', '请先生成并验证当前配置的受限试玩包');
+    }
     if (report.checks?.packedSaveDirectory?.verified !== true) throw fault('SAVE_DIRECTORY_UNVERIFIED', '这个试玩包尚未核实独立存档位置，请用新版重新生成；暂不打开旧包。');
     if (!report.exportPassed || !job.state.exportPassed) throw fault('BUILD_NOT_EXPORTED', '尚未生成完整试玩包');
     const output = await confined(folder, 'playable');

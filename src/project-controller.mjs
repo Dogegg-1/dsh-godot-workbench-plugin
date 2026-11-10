@@ -15,13 +15,40 @@ const validPath = (value, label) => {
   return path.resolve(value.trim());
 };
 
+async function requireGodotProject(root) {
+  const missing = () => fault('PROJECT_MISSING', '这里没有可用的 project.godot。请选择 Godot 工程所在的文件夹。');
+  const file = await confined(root, 'project.godot').catch(error => {
+    if (error.code === 'ENOENT') throw missing();
+    throw error;
+  });
+  if (!(await fs.stat(file)).isFile()) throw missing();
+}
+
+export async function previewProjectImport({ path: input }) {
+  const selected = validPath(typeof input === 'string' ? input.trim().replace(/^"(.*)"$/, '$1') : input, '工程路径');
+  const stat = await fs.stat(selected).catch(error => {
+    if (error.code === 'ENOENT' || error.code === 'ENOTDIR') throw fault('PROJECT_NOT_FOUND', '找不到这个工程位置，请重新选择。');
+    throw error;
+  });
+  const directory = stat.isDirectory();
+  const name = path.basename(selected);
+  if (!directory && (!stat.isFile() || (process.platform === 'win32' ? name.toLowerCase() : name) !== 'project.godot')) {
+    throw fault('INVALID_PATH', '请选择工程文件夹或其中的 project.godot 文件。');
+  }
+  const projectRoot = await fs.realpath(directory ? selected : path.dirname(selected));
+  await requireGodotProject(projectRoot);
+  return { projectRoot, title: await projectDisplayName(projectRoot) };
+}
+
 // One controller owns the selected project for this DSH profile. Switching is a
 // local user action, never a model tool; executions keep a lease on their target.
 export class ProjectController {
   constructor(config) {
+    this.restrictedProduction = config.restrictedProduction === true;
+    this.isolateRuntime = this.restrictedProduction || config.isolateRuntime === true;
     this.settingsPath = config.settingsPath ? validPath(config.settingsPath, '工作台设置文件') : null;
     this.selection = { schemaVersion: 1, revision: 0, projectRoot: validPath(config.projectRoot, '项目目录'), enginePath: config.enginePath ?? '', recentProjects: [], projects: [] };
-    this.workbench = new Workbench(this.selection);
+    this.workbench = new Workbench({ ...this.selection, restrictedProduction: this.restrictedProduction });
     this.active = 0; this.switching = false;
     this.ready = this.load();
     this.ready.catch(() => {}); // Surface a load error through the API, not an unhandled rejection.
@@ -46,7 +73,7 @@ export class ProjectController {
       if (state.projectOrder !== undefined && (!Array.isArray(state.projectOrder) || state.projectOrder.some(p => typeof p !== 'string' || !path.isAbsolute(p)))) throw fault('INVALID_SETTINGS', '项目排序格式不正确');
       state.projects ??= state.recentProjects;
       this.selection = state;
-      this.workbench = new Workbench(state);
+      this.workbench = new Workbench({ ...state, restrictedProduction: this.restrictedProduction });
     } catch (error) { if (error.code !== 'ENOENT') throw error; }
   }
   async configuration() {
@@ -84,7 +111,7 @@ export class ProjectController {
     finally { this.switching = false; }
   }
   async manageProjects(args) { return manageProjectLibrary(this, args); }
-  async configure({ projectRoot, enginePath = '', expectedRevision, signal, mode = 'connect', title = '' } = {}) {
+  async configure({ projectRoot, enginePath = '', expectedRevision, signal, mode = 'connect', title = '' } = {}, { newIntake = false } = {}) {
     await this.ready;
     if (!this.settingsPath) throw fault('SETTINGS_UNAVAILABLE', '当前加载方式没有启用项目配置，请使用工作台 profile');
     if (!Number.isInteger(expectedRevision) || expectedRevision !== this.selection.revision) throw fault('STALE_SETTINGS', '设置已变化，请重新打开项目设置再保存');
@@ -111,13 +138,13 @@ export class ProjectController {
         const rootStat = await fs.stat(projectRoot).catch(error => { if (error.code === 'ENOENT') throw fault('PROJECT_NOT_FOUND', '项目目录不存在，请选择已有的游戏目录或空文件夹'); throw error; });
         if (!rootStat.isDirectory()) throw fault('INVALID_PATH', '请选择项目文件夹，而不是 project.godot 文件');
         projectRoot = await fs.realpath(projectRoot);
-        if (mode === 'import') {
-          const file = await confined(projectRoot, 'project.godot').catch(error => { if (error.code === 'ENOENT') throw fault('PROJECT_MISSING', '该目录没有 project.godot，不能作为已有 Godot 工程导入'); throw error; });
-          if (!(await fs.stat(file)).isFile()) throw fault('PROJECT_MISSING', 'project.godot 必须是文件');
-        }
+        if (mode === 'import') await requireGodotProject(projectRoot);
       }
       let engine = { status: 'unavailable', reason: '未配置引擎，可以先整理方案' };
-      if (enginePath) {
+      if (enginePath && this.restrictedProduction) {
+        if (!(await fs.stat(enginePath).catch(() => null))?.isFile()) throw fault('INVALID_ENGINE', '未找到 Godot 可执行文件');
+        engine = { status: 'not-checked', reason: '将在受限运行时验证引擎' };
+      } else if (enginePath) {
         engine = await checkGodot(enginePath, mode === 'create' ? path.dirname(projectRoot) : projectRoot, { signal });
         if (engine.status !== 'available') throw fault('INVALID_ENGINE', `Godot 路径未通过验证：${engine.reason}`);
       }
@@ -138,10 +165,10 @@ export class ProjectController {
         const name = JSON.stringify(title.trim());
         await fs.writeFile(await confined(projectRoot, 'project.godot', { mustExist: false }), `; Created by DSH Godot Workbench. Gameplay is not implemented yet.\nconfig_version=5\n\n[application]\nconfig/name=${name}\n\n[rendering]\nrenderer/rendering_method="gl_compatibility"\n`, { flag: 'wx' });
       }
-      const next = new Workbench({ projectRoot, enginePath });
+      const next = new Workbench({ projectRoot, enginePath, restrictedProduction: this.restrictedProduction });
       const nextState = await next.store.read();
       if (nextState.tasks.some(task => task.status === 'running') && !sameProject(projectRoot, this.workbench.root)) throw fault('TASK_RUNNING', '目标工程有执行中或中断待核查的任务，请先在原会话核对');
-      await next.initialize();
+      await next.initialize({ prototypeBrief: mode === 'create' || newIntake });
       // Reopening an engineering environment requires fresh diagnosis, even if
       // the source files stayed unchanged. Preserve the old report as history.
       await next.store.transaction(state => {

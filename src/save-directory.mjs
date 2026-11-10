@@ -17,19 +17,20 @@ func _process(_delta: float) -> bool:
 `);
   return `res://${directory}/probe.gd`;
 }
-export async function verifySaveDirectory({ executable, project, script, expected, pack, signal }) {
+export async function verifySaveDirectory({ executable, project, script, expected, pack, signal, run = runProcess, containedIn }) {
   // Release templates may silently ignore --script. Probe the actual PCK using
   // the matching editor binary, whose MainLoop script support was verified.
-  const result = await runProcess(executable, ['--headless', '--path', project, ...(pack ? ['--main-pack', pack] : []), '--script', script], { cwd: project, timeoutMs: 30000, signal });
+  const result = await run(executable, ['--headless', '--path', project, ...(pack ? ['--main-pack', pack] : []), '--script', script], { cwd: project, timeoutMs: 30000, signal });
   const line = result.stdout.split(/\r?\n/).find(line => line.startsWith('WORKBENCH_USER_DIRECTORY:'));
   let observed;
   try { observed = line && JSON.parse(line.slice('WORKBENCH_USER_DIRECTORY:'.length)); } catch { /* Invalid output is not proof. */ }
   const normalize = value => String(value ?? '').replaceAll('\\', '/').replace(/\/$/, '').toLowerCase();
-  const verified = result.exitCode === 0 && !result.timedOut && !result.truncated && observed?.custom === true && normalize(observed.configured) === normalize(expected) && normalize(observed.actual).endsWith('/' + normalize(expected));
+  const verified = result.exitCode === 0 && !result.timedOut && !result.truncated && observed?.custom === true && normalize(observed.configured) === normalize(expected) && normalize(observed.actual).endsWith('/' + normalize(expected))
+    && (!containedIn || (path.isAbsolute(observed.actual) && normalize(path.resolve(observed.actual)).startsWith(normalize(path.resolve(containedIn)) + '/')));
   if (!verified) {
     const error = fault('SAVE_DIRECTORY_UNVERIFIED', '尚未确认独立存档目录，已停止启动游戏，避免改动原有进度。');
     error.evidence = { ...result, observed: observed ?? null, expected, verified: false };
     throw error;
   }
-  return { ...observed, expected, verified: true, exitCode: 0, stdout: JSON.stringify(observed), stderr: '' };
+  return { ...observed, expected, verified: true, exitCode: 0, stdout: JSON.stringify(observed), stderr: '', ...(result.sandbox ? { sandbox: result.sandbox } : {}) };
 }

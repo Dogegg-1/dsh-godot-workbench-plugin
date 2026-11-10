@@ -28,7 +28,8 @@ export async function godotProjectListPath(enginePath, { platform = process.plat
 
 // ConfigFile parsing/serialization is performed by the selected engine itself.
 // The workbench lock coordinates our writes; an external manager does not honor it.
-export async function registerGodotProject({ root, enginePath }, { signal, run = runProcess, checkEngine = checkGodot } = {}) {
+export async function registerGodotProject({ root, enginePath, restrictedProduction }, { signal, run = runProcess, checkEngine = checkGodot } = {}) {
+  if (restrictedProduction) return { status: 'unavailable', message: '工程已保留，受控制作配置暂不登记到启动器。' };
   if (!enginePath) return { status: 'unavailable', message: '工程已保留；选择 Godot 后可登记到项目管理器。' };
   const file = await confined(root, 'project.godot');
   if (!(await fs.stat(file)).isFile()) throw fault('PROJECT_MISSING', 'project.godot 必须是文件');

@@ -1,3 +1,13 @@
+export function nativeOpenGlStartupFailed(report) {
+  if (report.status !== 'failed' || report.graphics !== 'project' || !report.exportPassed) return false;
+  const startup = report.checks?.startup;
+  if (!startup || startup.timedOut || startup.truncated || startup.fileLogTruncated || startup.fileLogError) return false;
+  if (!Number.isInteger(startup.exitCode) || (startup.exitCode >>> 0) !== 0xc0000005) return false;
+  if (startup.issues?.some(issue => /SCRIPT ERROR:|Parse Error/.test(issue.message))) return false;
+  const driver = startup.fileLog?.match(/^OpenGL API .* - Compatibility - Using Device:.*$/mi)?.[0];
+  return Boolean(driver && !/\bANGLE\b/i.test(driver));
+}
+
 // Classify observed failure signals, not their unproven root cause.
 export function classifyBuildFailure(report) {
   if (report.status === 'ready' || report.status === 'cancelled') return null;

@@ -4,17 +4,17 @@
 
 ## 安装到 DSH
 
-使用 Windows 上的 DeepSeek Harness **0.2.1-rc.2 || 0.2.1-rc.3**。
+使用 Windows 上的 DeepSeek Harness **0.2.1-rc.2 || 0.2.1-rc.3 || 0.2.2-rc.1**。
 
 1. 打开「插件 → 添加插件」，粘贴下方地址，点「安装」和「立即启用」。
 
 ```text
-https://github.com/Dogegg-1/dsh-godot-workbench-plugin/releases/download/v0.1.3/godot-workbench-0.1.3.tgz
+https://github.com/Dogegg-1/dsh-godot-workbench-plugin/releases/download/v0.1.4/godot-workbench-0.1.4.tgz
 ```
 
 2. 保存工作，完全退出并重开 DSH，再点「游戏开发」。
 
-下载连不上时，可把[安装包](https://github.com/Dogegg-1/dsh-godot-workbench-plugin/releases/download/v0.1.3/godot-workbench-0.1.3.tgz)传到目标电脑，在同一个「添加插件」窗口选择本地文件。
+下载连不上时，可把[安装包](https://github.com/Dogegg-1/dsh-godot-workbench-plugin/releases/download/v0.1.4/godot-workbench-0.1.4.tgz)传到目标电脑，在同一个「添加插件」窗口选择本地文件。
 
 ## 开始使用
 

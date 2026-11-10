@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
-  "updatedAt": "2026-11-09",
-  "coverageNote": "43 条知识条目覆盖五类首期主题，其中 29 条提供可展开配方；不代表完整游戏开发学科。已查阅来源不等于通过运行验证。重点为 Windows、2D、GDScript；3D、C# 和具体平台支持需继续查证。",
+  "updatedAt": "2026-11-11",
+  "coverageNote": "53 条知识条目覆盖五类主题，其中 39 条提供可展开配方。重点是 Windows、2D 与 GDScript。已查阅来源的条目仍需结合项目验证，3D、C# 和具体平台支持需继续查证。",
   "entries": [
     {
       "id": "engine-scenes",
@@ -18,6 +18,7 @@
         "resource"
       ],
       "stages": [
+        "intake",
         "plan",
         "implement"
       ],
@@ -1187,6 +1188,7 @@
         "Web",
         "Android",
         "构建",
+        "安装包检查",
         "重启",
         "宿主",
         "状态待确认",
@@ -1268,6 +1270,7 @@
       "content": "先定义尺寸、锚点、格式和替换接口，再生成或采购素材。保留来源与用途记录，不让临时素材绑死场景。",
       "bodyPath": "recipes/production-assets.md",
       "stages": [
+        "intake",
         "plan",
         "implement",
         "verify",
@@ -1318,6 +1321,299 @@
         "note": "已查阅官方高层多人和专用服务端导出文档。来自真实评审失败样例的建议整理，尚未通过实际联网或新增配方模型效果验证。"
       },
       "bodyPath": "recipes/engineering-multiplayer-scope.md"
+    },
+    {
+      "id": "production-share-windows",
+      "category": "production",
+      "title": "让朋友解压就能试玩 Windows 包",
+      "tags": [
+        "发给朋友",
+        "不用装Godot",
+        "Windows试玩包",
+        "解压试玩",
+        "双击游玩",
+        "pck",
+        "exe"
+      ],
+      "stages": [
+        "plan",
+        "verify",
+        "finish",
+        "diagnose"
+      ],
+      "kind": "official-summary-and-recipe",
+      "version": "Godot 4.7 机制，项目适用性需验证",
+      "source": "https://docs.godotengine.org/en/4.7/tutorials/export/exporting_for_windows.html",
+      "content": "发朋友试玩时，发送核对过的整份 Windows 构建。把解压、启动、试玩、保存重开分别检查。",
+      "updatedAt": "2026-11-11",
+      "verification": {
+        "status": "source-reviewed",
+        "checkedAt": "2026-11-11",
+        "note": "已核对所列官方说明。操作步骤仍需在实际项目和目标设备验证。"
+      },
+      "bodyPath": "recipes/production-share-windows.md"
+    },
+    {
+      "id": "engineering-save-reopen",
+      "category": "engineering",
+      "title": "关掉游戏后保留金币和进度",
+      "tags": [
+        "关掉再打开",
+        "保留金币和矿机",
+        "重开回到初始值",
+        "读取顺序",
+        "进度丢失",
+        "user://"
+      ],
+      "stages": [
+        "implement",
+        "diagnose",
+        "verify"
+      ],
+      "kind": "official-summary-and-recipe",
+      "version": "Godot 4.7 机制，项目适用性需验证",
+      "source": "https://docs.godotengine.org/en/4.7/tutorials/io/data_paths.html",
+      "content": "重开归零时，先确认是否写入和读到同一个档，再检查初始化有没有覆盖进度。",
+      "updatedAt": "2026-11-11",
+      "verification": {
+        "status": "source-reviewed",
+        "checkedAt": "2026-11-11",
+        "note": "已核对所列官方说明。操作步骤仍需在实际项目和目标设备验证。"
+      },
+      "bodyPath": "recipes/engineering-save-reopen.md"
+    },
+    {
+      "id": "engine-menu-focus",
+      "category": "engine",
+      "title": "手柄和键盘能走完菜单",
+      "tags": [
+        "键盘导航",
+        "手柄菜单",
+        "焦点",
+        "方向键选不中",
+        "Tab",
+        "相邻按钮"
+      ],
+      "stages": [
+        "implement",
+        "diagnose",
+        "verify"
+      ],
+      "kind": "official-summary-and-recipe",
+      "version": "Godot 4.7 机制，项目适用性需验证",
+      "source": "https://docs.godotengine.org/en/4.7/tutorials/ui/gui_navigation.html",
+      "content": "设置菜单初始焦点和返回位置，分开菜单确认与游戏动作。用键盘和目标手柄各走一遍。",
+      "updatedAt": "2026-11-11",
+      "verification": {
+        "status": "source-reviewed",
+        "checkedAt": "2026-11-11",
+        "note": "已核对所列官方说明。操作步骤仍需在实际项目和目标设备验证。"
+      },
+      "bodyPath": "recipes/engine-menu-focus.md"
+    },
+    {
+      "id": "engine-font-glyphs",
+      "category": "engine",
+      "title": "中文变方块和字体丢字排查",
+      "tags": [
+        "中文方块",
+        "字体回退",
+        "丢字",
+        "字形",
+        "缺字",
+        "乱码"
+      ],
+      "stages": [
+        "implement",
+        "diagnose",
+        "verify"
+      ],
+      "kind": "official-summary-and-recipe",
+      "version": "Godot 4.7 机制，项目适用性需验证",
+      "source": "https://docs.godotengine.org/en/4.7/tutorials/ui/gui_using_fonts.html#font-fallbacks",
+      "content": "区分字体缺字与布局裁切。用实际界面文字和长字符串，分别核对编辑器及导出包。",
+      "updatedAt": "2026-11-11",
+      "verification": {
+        "status": "source-reviewed",
+        "checkedAt": "2026-11-11",
+        "note": "已核对所列官方说明。操作步骤仍需在实际项目和目标设备验证。"
+      },
+      "bodyPath": "recipes/engine-font-glyphs.md"
+    },
+    {
+      "id": "engine-2d-textures",
+      "category": "engine",
+      "title": "像素美术发糊或边缘渗色",
+      "tags": [
+        "像素发糊",
+        "纹理过滤",
+        "最近邻",
+        "图集渗色",
+        "整数缩放",
+        "像素抖动"
+      ],
+      "stages": [
+        "implement",
+        "diagnose",
+        "verify"
+      ],
+      "kind": "official-summary-and-recipe",
+      "version": "Godot 4.7 机制，项目适用性需验证",
+      "source": "https://docs.godotengine.org/en/4.7/tutorials/assets_pipeline/importing_images.html#import-options",
+      "content": "固定一张小图，分开比较纹理过滤、窗口缩放和镜头移动。串色时再检查图集切片。",
+      "updatedAt": "2026-11-11",
+      "verification": {
+        "status": "source-reviewed",
+        "checkedAt": "2026-11-11",
+        "note": "已核对所列官方说明。操作步骤仍需在实际项目和目标设备验证。"
+      },
+      "bodyPath": "recipes/engine-2d-textures.md"
+    },
+    {
+      "id": "design-dominant-strategy",
+      "category": "design",
+      "title": "让两种策略都值得选",
+      "tags": [
+        "最优策略",
+        "流派平衡",
+        "总选同一项",
+        "风险路线",
+        "期望收益",
+        "策略单一"
+      ],
+      "stages": [
+        "plan",
+        "diagnose",
+        "verify"
+      ],
+      "kind": "original-recipe",
+      "version": "原创方法，示例参数需项目验证",
+      "source": "project:knowledge/recipes/design-dominant-strategy.md",
+      "content": "在相同预算下比较净收益、等待和失败代价，让不同路线在不同情境中有清楚的优势。",
+      "updatedAt": "2026-11-11",
+      "verification": {
+        "status": "recipe-not-runtime-tested",
+        "checkedAt": "2026-11-11",
+        "note": "原创验收建议和示例。未在目标项目运行验证。"
+      },
+      "bodyPath": "recipes/design-dominant-strategy.md"
+    },
+    {
+      "id": "design-large-numbers",
+      "category": "design",
+      "title": "大额货币的显示与购买边界",
+      "tags": [
+        "大数缩写",
+        "舍入",
+        "显示可购却失败",
+        "显示精度",
+        "大额余额",
+        "还差多少"
+      ],
+      "stages": [
+        "plan",
+        "implement",
+        "diagnose",
+        "verify"
+      ],
+      "kind": "original-recipe",
+      "version": "原创方法，示例参数需项目验证",
+      "source": "project:knowledge/recipes/design-large-numbers.md",
+      "content": "用原始金额结算，只对显示值缩写。测试余额比售价少 1、相等和多 1。",
+      "updatedAt": "2026-11-11",
+      "verification": {
+        "status": "recipe-not-runtime-tested",
+        "checkedAt": "2026-11-11",
+        "note": "原创验收建议和示例。未在目标项目运行验证。"
+      },
+      "bodyPath": "recipes/design-large-numbers.md"
+    },
+    {
+      "id": "feel-input-latency",
+      "category": "feel",
+      "title": "测量按键到画面的响应延迟",
+      "tags": [
+        "输入延迟",
+        "反应慢半拍",
+        "动作启动慢",
+        "按键响应",
+        "端到端",
+        "首个反馈"
+      ],
+      "stages": [
+        "diagnose",
+        "verify"
+      ],
+      "kind": "original-recipe",
+      "version": "原创方法，示例参数需项目验证",
+      "source": "project:knowledge/recipes/feel-input-latency.md",
+      "content": "分开记录收到输入、动作启动和可见反馈。每版重复测量，再用实际试玩判断。",
+      "updatedAt": "2026-11-11",
+      "verification": {
+        "status": "recipe-not-runtime-tested",
+        "checkedAt": "2026-11-11",
+        "note": "原创验收建议和示例。未在目标项目运行验证。"
+      },
+      "bodyPath": "recipes/feel-input-latency.md"
+    },
+    {
+      "id": "engineering-playthrough-check",
+      "category": "engineering",
+      "title": "让一次试玩路径可以重复核对",
+      "tags": [
+        "复跑路径",
+        "输入回放",
+        "重复试玩",
+        "逐步断言",
+        "固定测试档",
+        "最早状态差异"
+      ],
+      "stages": [
+        "implement",
+        "diagnose",
+        "verify"
+      ],
+      "kind": "original-recipe",
+      "version": "原创方法，示例参数需项目验证",
+      "source": "project:knowledge/recipes/engineering-playthrough-check.md",
+      "content": "记录起始条件、输入与检查点。找到第一个不同的状态，再用真实操作核对完整路径。",
+      "updatedAt": "2026-11-11",
+      "verification": {
+        "status": "recipe-not-runtime-tested",
+        "checkedAt": "2026-11-11",
+        "note": "原创验收建议和示例。未在目标项目运行验证。"
+      },
+      "bodyPath": "recipes/engineering-playthrough-check.md"
+    },
+    {
+      "id": "production-change-coverage",
+      "category": "production",
+      "title": "需求变更后只复验受影响的范围",
+      "tags": [
+        "影响范围",
+        "选择复验范围",
+        "验证失效",
+        "局部复验",
+        "修改后重测",
+        "沿用结论"
+      ],
+      "stages": [
+        "plan",
+        "diagnose",
+        "verify",
+        "finish"
+      ],
+      "kind": "original-recipe",
+      "version": "原创方法，示例参数需项目验证",
+      "source": "project:knowledge/recipes/production-change-coverage.md",
+      "content": "把旧结论分为需重测、可沿用和证据不足。记录影响范围、复验路径和构建编号。",
+      "updatedAt": "2026-11-11",
+      "verification": {
+        "status": "recipe-not-runtime-tested",
+        "checkedAt": "2026-11-11",
+        "note": "原创验收建议和示例。未在目标项目运行验证。"
+      },
+      "bodyPath": "recipes/production-change-coverage.md"
     }
   ]
 }

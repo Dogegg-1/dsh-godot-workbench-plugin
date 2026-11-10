@@ -49,7 +49,16 @@ export async function prepareProjectIntake(controller, { requestId, expectedRevi
     if (!record) {
       if (parentDirectory !== undefined && (typeof parentDirectory !== 'string' || !path.isAbsolute(parentDirectory))) throw fault('INVALID_PATH', '可选保存位置需要已有目录的完整路径');
       if (!parentDirectory) await fs.mkdir(defaultParent, { recursive: true });
-      const parent = await fs.realpath(parentDirectory ?? defaultParent);
+      let parent;
+      try {
+        parent = await fs.realpath(parentDirectory ?? defaultParent);
+        if (!(await fs.stat(parent)).isDirectory()) throw fault('INVALID_PARENT_DIRECTORY', '保存位置不是文件夹，请选择已有文件夹。');
+      } catch (error) {
+        // This code is reserved for validation before the request record exists.
+        // Later ENOENT errors may follow creation and must retain request identity.
+        if (['ENOENT', 'ENOTDIR'].includes(error.code)) throw fault('INVALID_PARENT_DIRECTORY', '保存文件夹不存在，请检查位置或选择已有文件夹。');
+        throw error;
+      }
       const projectRoot = path.join(parent, `新游戏-${new Date().toISOString().replace(/[-:]/g, '').slice(0, 15)}-${requestId.slice(-8)}`);
       record = { version: 1, projectRoot, originRoot: config.projectRoot, parentRequest: parentDirectory ?? null, requestId };
       await fs.writeFile(recordFile, JSON.stringify(record), { flag: 'wx' });
@@ -63,7 +72,7 @@ export async function prepareProjectIntake(controller, { requestId, expectedRevi
       const marker = await inspectProjectIntake({ root: record.projectRoot });
       if (!marker || marker.requestId !== requestId) throw fault('PROJECT_EXISTS', '目标目录已存在且不是本次准备目录，未覆盖任何文件');
     }
-    const next = await controller.configure({ projectRoot: record.projectRoot, enginePath: config.enginePath, expectedRevision, mode: 'connect' });
+    const next = await controller.configure({ projectRoot: record.projectRoot, enginePath: config.enginePath, expectedRevision, mode: 'connect' }, { newIntake: true });
     return { ...next, intake: await inspectProjectIntake(controller.workbench) };
   } finally { controller.intakePreparing = false; }
 }

@@ -46,7 +46,11 @@ export async function executeAutomaticCheck(workbench, checkId, signal) {
     if (!check || check.status !== 'checking') return { check: check ?? null, report: state.diagnostics.find(r => r.id === check?.reportId) ?? null };
     try {
       signal?.throwIfAborted();
-      const report = await diagnose(workbench.root, state, { enginePath: workbench.enginePath, runImport: check.mode === 'engine', skipEngineReason: check.mode === 'static' ? check.engineSkippedReason : undefined, signal });
+      const report = await diagnose(workbench.root, state, {
+        enginePath: workbench.enginePath, runImport: check.mode === 'engine', isolateRuntime: workbench.restrictedProduction,
+        skipEngineReason: check.mode === 'static' ? check.engineSkippedReason : workbench.restrictedProduction && check.mode === 'quick' ? '快速检查只核对项目文件' : undefined,
+        signal,
+      });
       report.origin = { type: 'automatic', checkId, taskId: check.taskId, trigger: check.trigger, paths: check.paths, mode: check.mode };
       state.diagnostics.push(report);
       check.status = 'completed'; check.reportId = report.id; check.finishedAt = now();

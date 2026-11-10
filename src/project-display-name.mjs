@@ -2,6 +2,15 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { confined } from './storage.mjs';
 
+export async function isWorkbenchStartSpace(root) {
+  try {
+    const marker = await confined(root, '.workbench-initial-space');
+    const stat = await fs.stat(marker);
+    const expected = 'DSH Godot Workbench initial space v1\n';
+    return stat.isFile() && stat.size === Buffer.byteLength(expected) && await fs.readFile(marker, 'utf8') === expected;
+  } catch { return false; }
+}
+
 // Display metadata only: never run the engine or create/alter a plan to name a project.
 export async function projectDisplayName(root) {
   const fallback = path.basename(root) || root;
@@ -27,13 +36,7 @@ export async function projectDisplayName(root) {
   } catch (error) {
     // Only our marked, not-yet-created space gets a friendly name. A real
     // project (even one with invalid metadata) must retain its own identity.
-    if (error.code === 'ENOENT') {
-      try {
-        const marker = await confined(root, '.workbench-initial-space');
-        const expected = 'DSH Godot Workbench initial space v1\n';
-        if ((await fs.stat(marker)).size === Buffer.byteLength(expected) && await fs.readFile(marker, 'utf8') === expected) return '开始创作';
-      } catch { /* Missing or inaccessible marker: retain the directory name. */ }
-    }
+    if (error.code === 'ENOENT' && await isWorkbenchStartSpace(root)) return '开始创作';
   }
   finally { await handle?.close(); }
   return fallback;

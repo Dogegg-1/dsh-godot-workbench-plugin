@@ -1,5 +1,5 @@
 import { digest, fault, now } from './storage.mjs';
-import { gddSections } from './lifecycle-schema.mjs';
+import { gddSections, prototypeBriefPolicy } from './lifecycle-schema.mjs';
 
 const required = [
   ['concept', '这款游戏的一句话概念是什么？'],
@@ -9,6 +9,9 @@ const required = [
 ];
 const nonempty = value => typeof value === 'string' && value.trim().length > 0;
 const validList = value => Array.isArray(value) && value.length > 0 && value.every(nonempty);
+const undecided = /^(?:待定|未定|未确定|暂未确定|不确定|待明确|待补充|待确认|待讨论|待设计|稍后再定|之后再说|暂不明确|先空着|随便|同上|暂无|未知|TBD|TODO)[\s。！!？?….]*$/iu;
+const specific = value => nonempty(value) && !undecided.test(value.trim());
+const distinctCriteria = list => validList(list) && list.every(specific) && new Set(list.map(value => value.trim().replace(/[。！!？?.]+$/u, ''))).size >= 2;
 
 export function normalizePlan(input) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) throw fault('INVALID_PLAN', '方案必须是对象');
@@ -51,24 +54,34 @@ export function normalizePlan(input) {
   return plan;
 }
 
-export function assessPlan(plan) {
-  if (!plan) return { ready: false, questions: ['请描述游戏概念和想验证的核心体验。'], missing: ['plan'] };
-  const issues = required.filter(([key]) => !nonempty(plan[key]));
-  if (!nonempty(plan.title)) issues.push(['title', '给项目取一个临时名称即可。']);
-  if (!validList(plan.inScope)) issues.push(['inScope', '当前原型必须完成哪些功能？']);
-  if (!validList(plan.outOfScope)) issues.push(['outOfScope', '当前明确先不做什么？没有排除项也请明确写出。']);
-  if (!validList(plan.acceptance)) issues.push(['acceptance', '试玩时看到哪些结果，才算当前阶段完成？']);
+export function assessPlan(plan, policy) {
+  const brief = policy === prototypeBriefPolicy;
+  const basis = brief ? { policy } : {};
+  if (!plan) return { ...basis, ready: false, questions: ['请描述游戏概念和想验证的核心体验。'], missing: ['plan'] };
+  const decided = brief ? specific : nonempty;
+  const issues = required.filter(([key]) => !decided(plan[key]));
+  if (!decided(plan.title)) issues.push(['title', '给项目取一个临时名称即可。']);
+  if (brief) {
+    if (!specific(plan.visualDirection)) issues.push(['visualDirection', '原型用什么画面风格？也可以明确选择纯色或灰盒占位。']);
+    if (!specific(plan.gdd?.progression)) issues.push(['gdd.progression', '第一轮玩家要达成什么目标，怎样知道成功或结束？']);
+    if (!specific(plan.gdd?.content)) issues.push(['gdd.content', '第一版能玩到哪些代表内容？例如一个关卡、一个对手或一轮升级。']);
+  }
+  if (!validList(plan.inScope) || (brief && !plan.inScope.every(specific))) issues.push(['inScope', '当前原型必须完成哪些功能？']);
+  if (!validList(plan.outOfScope) || (brief && !plan.outOfScope.every(specific))) issues.push(['outOfScope', '当前明确先不做什么？没有排除项也请明确写出。']);
+  if (brief ? !distinctCriteria(plan.acceptance) : !validList(plan.acceptance)) {
+    issues.push(['acceptance', brief ? '写出两条不同的试玩结果，覆盖正常操作和一个需要核对的边界。' : '试玩时看到哪些结果，才算当前阶段完成？']);
+  }
   if (plan.milestones?.length) {
     const mapped = new Set(plan.milestones.flatMap(item => item.acceptanceItems));
     const missing = plan.acceptance.map((_, index) => index + 1).filter(number => !mapped.has(number));
     if (missing.length) issues.push(['milestones', `验收条件 ${missing.join('、')} 尚未安排到项目阶段，请补齐或调整阶段范围。`]);
   }
   for (const q of plan.blockingQuestions ?? []) issues.push(['blockingQuestions', q]);
-  return { ready: issues.length === 0, missing: [...new Set(issues.map(([k]) => k))], questions: issues.slice(0, 3).map(([, q]) => q), remainingQuestions: Math.max(0, issues.length - 3) };
+  return { ...basis, ready: issues.length === 0, missing: [...new Set(issues.map(([k]) => k))], questions: issues.slice(0, 3).map(([, q]) => q), remainingQuestions: Math.max(0, issues.length - 3) };
 }
 
 export function approvalValid(state) {
-  return Boolean(state.plan && state.approval && state.approval.planHash === digest(state.plan) && assessPlan(state.plan).ready);
+  return Boolean(state.plan && state.approval && state.approval.planHash === digest(state.plan) && assessPlan(state.plan, state.planningPolicy).ready);
 }
 
 export function validateAcceptanceItems(plan, items = []) {
@@ -112,7 +125,8 @@ export function milestoneProgress(state, snapshot) {
 
 export function recordConfirmation(state, { planHash, statement, developmentMode = 'stepwise' }) {
   if (!['stepwise', 'continuous'].includes(developmentMode)) throw fault('INVALID_DEVELOPMENT_MODE', '请选择连续制作或逐项确认');
-  if (!assessPlan(state.plan).ready) throw fault('PLAN_INCOMPLETE', '先解决核心体验、范围与验收中的缺失项');
+  const assessment = assessPlan(state.plan, state.planningPolicy);
+  if (!assessment.ready) throw fault('PLAN_INCOMPLETE', assessment.policy ? assessment.questions.join(' ') : '先解决核心体验、范围与验收中的缺失项');
   if (planHash !== digest(state.plan)) throw fault('STALE_PLAN', '方案已改变，请重新查看后确认');
   if (!nonempty(statement)) throw fault('MISSING_CONFIRMATION', '需要用户明确的确认记录');
   state.approval = { planHash, statement: statement.trim(), at: now(), actor: 'local-user', developmentMode };

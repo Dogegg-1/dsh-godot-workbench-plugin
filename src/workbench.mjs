@@ -6,7 +6,7 @@ import { taskCanStart } from './task-gates.mjs';
 import { normalizeDiagnosisPresentation, diagnosisExplanationBounds } from './diagnosis-presentation.mjs';
 import { Store, digest, event, fault, now } from './storage.mjs';
 import { normalizePlan, assessPlan, approvalValid, requireApproval, recordConfirmation, renderDocuments, acceptanceCoverage, validateAcceptanceItems, milestoneProgress } from './planning.mjs';
-import { diagnose, prepareSuggestion, diagnosisContext } from './diagnostics.mjs';
+import { diagnose, prepareSuggestion, diagnosisContext, currentDiagnosis } from './diagnostics.mjs';
 import { gatherContext, searchKnowledge, recordKnowledgeSearch, recordKnowledgeFeedback } from './knowledge.mjs';
 import { inspectProject } from './project.mjs';
 import { lookupEngineReference } from './engine-reference.mjs';
@@ -20,6 +20,8 @@ import { saveParameters, assetInfo, importAsset } from './resource-actions.mjs';
 import { listTemporaryFixes, changeTemporaryFix } from './temporary-fixes.mjs';
 import { captureDevelopmentReport, reportSourceHash, developmentAnalysisSource, recordDevelopmentAnalysis, developmentFollowUp } from './development-reports.mjs';
 import { summarizeStages, summarizeMilestones } from './stage-reports.mjs';
+import { prototypeBriefPolicy } from './lifecycle-schema.mjs';
+import { isWorkbenchStartSpace } from './project-display-name.mjs';
 import { stageAnalysisSource, recordStageAnalysis } from './stage-analysis.mjs';
 import { readReportSource, requireCompleteReportRead } from './report-source-pages.mjs';
 import { lessonCandidates, reviewLesson, projectLessonEntries, exportLesson, inspectLessonPackage, importLesson } from './project-lessons.mjs';
@@ -29,16 +31,27 @@ const text = (value, label) => {
   return value.trim();
 };
 const publicTask = ({ summaryBasis, ...task }) => task;
+const legacyRestrictedCheckReason = '受控制作配置使用独立的受限运行验证玩法';
+const canStartBrief = state => state.plan === null && !state.approval && !state.tasks.length;
+
+async function planningPolicy(root, state) {
+  if (state.planningPolicy) return state.planningPolicy;
+  if (canStartBrief(state) && await isWorkbenchStartSpace(root)) return prototypeBriefPolicy;
+}
 
 export class Workbench {
-  constructor({ projectRoot, enginePath } = {}) {
+  constructor({ projectRoot, enginePath, restrictedProduction = false } = {}) {
     if (!projectRoot) throw fault('MISSING_PROJECT', '请先选择项目目录');
     this.store = new Store(projectRoot);
     this.root = this.store.root;
     this.enginePath = enginePath;
+    this.restrictedProduction = restrictedProduction === true;
   }
-  async initialize() {
-    await this.store.transaction(state => { if (!state.events.length) event(state, 'project-created', {}); });
+  async initialize({ prototypeBrief = false } = {}) {
+    await this.store.transaction(state => {
+      if (prototypeBrief && canStartBrief(state)) state.planningPolicy = prototypeBriefPolicy;
+      if (!state.events.length) event(state, 'project-created', {});
+    });
     return this.status();
   }
   async lifecycleEngineIdentity() {
@@ -69,15 +82,16 @@ export class Workbench {
   async status() {
     const state = await this.store.read();
     const fileRecovery = await pendingFileOperations(this.root, state);
-    const assessment = assessPlan(state.plan);
+    const assessment = assessPlan(state.plan, await planningPolicy(this.root, state));
     const approved = approvalValid(state);
     const storedDiagnosis = state.diagnostics.at(-1);
-    const needsAcceptanceSnapshot = state.tasks.some(task => task.status === 'awaiting-review' || (task.status === 'accepted' && task.review?.coveredAcceptance?.length));
+    const needsAcceptanceSnapshot = state.tasks.some(task => task.status === 'awaiting-review' || (task.status === 'accepted' && (task.review?.basis || task.review?.coveredAcceptance?.length)));
     const snapshot = await inspectProject(this.root);
+    const engineIdentity = await this.lifecycleEngineIdentity();
     const acceptanceSnapshot = needsAcceptanceSnapshot ? snapshot : null;
     // Editor and external file saves do not emit workbench events. Derive freshness
     // on read, without rewriting the historical report or incrementing revisions.
-    const latestDiagnosis = storedDiagnosis ? { ...storedDiagnosis, stale: Boolean(storedDiagnosis.stale || !snapshot?.complete || storedDiagnosis.fingerprint !== snapshot.fingerprint || storedDiagnosis.workflowFingerprint !== diagnosisContext(state)) } : null;
+    const latestDiagnosis = currentDiagnosis(storedDiagnosis, state, snapshot, engineIdentity);
     const coverage = acceptanceCoverage(state, acceptanceSnapshot);
     const milestones = milestoneProgress(state, acceptanceSnapshot);
     const currentHash = state.plan ? digest(state.plan) : null;
@@ -88,7 +102,7 @@ export class Workbench {
     const phase = !assessment.ready ? 'intake' : !approved ? 'plan' : automaticCheck?.status === 'checking' ? 'diagnose' : !current.length || current.some(t => ['pending', 'running', 'failed', 'cancelled'].includes(t.status)) ? 'implement' : current.some(t => t.status !== 'accepted') || !coverage.complete || milestones.some(item => !item.complete) ? 'verify' : 'finish';
     const lessons = lessonCandidates(state).filter(item => !item.stale && item.review?.status !== 'revoked');
     const knowledgeGrowth = { total: lessons.length, pending: lessons.filter(item => item.review?.status !== 'approved').length, version: lessons.length ? digest(lessons.map(item => [item.key, item.sourceHash])) : null };
-    return { lifecycle: lifecycleStatus(state, snapshot, await this.lifecycleEngineIdentity()), knowledgeGrowth, milestones, acceptanceSnapshot: acceptanceSnapshot ? { fingerprint: acceptanceSnapshot.fingerprint, complete: acceptanceSnapshot.complete } : null, acceptanceCoverage: coverage, projectManager: state.projectManager?.enginePath === (this.enginePath ?? '') ? state.projectManager : null, projectRoot: this.root, enginePath: this.enginePath ?? null, projectId: state.projectId, revision: state.revision, phase, developmentMode, plan: state.plan, planHash: currentHash, assessment, approved, approval: state.approval, tasks, temporaryFixes: state.temporaryFixes ?? [], recovery: state.tasks.map(executionHealth).filter(Boolean), fileRecovery, recordHealth: { ...await recordHealth(this.root), backupWarning: this.store.backupWarning ?? null }, progress: { accepted: current.filter(t => t.status === 'accepted').length, total: current.length, meaning: '当前方案的人工验收任务数，不代表质量百分比' }, automaticCheck: automaticCheck ? { ...automaticCheck, health: checkHealth(automaticCheck) } : null, latestDiagnosis, documents: renderDocuments(state.plan, { tasks, coverage, phase, approved }) };
+    return { lifecycle: lifecycleStatus(state, snapshot, engineIdentity), knowledgeGrowth, milestones, acceptanceSnapshot: acceptanceSnapshot ? { fingerprint: acceptanceSnapshot.fingerprint, complete: acceptanceSnapshot.complete } : null, acceptanceCoverage: coverage, projectManager: state.projectManager?.enginePath === (this.enginePath ?? '') ? state.projectManager : null, projectRoot: this.root, enginePath: this.enginePath ?? null, projectId: state.projectId, revision: state.revision, phase, developmentMode, plan: state.plan, planHash: currentHash, assessment, approved, approval: state.approval, tasks, temporaryFixes: state.temporaryFixes ?? [], recovery: state.tasks.map(executionHealth).filter(Boolean), fileRecovery, recordHealth: { ...await recordHealth(this.root), backupWarning: this.store.backupWarning ?? null }, progress: { accepted: current.filter(t => t.status === 'accepted').length, total: current.length, meaning: '当前方案的人工验收任务数，不代表质量百分比' }, automaticCheck: automaticCheck ? { ...automaticCheck, health: checkHealth(automaticCheck) } : null, latestDiagnosis, documents: renderDocuments(state.plan, { tasks, coverage, phase, approved }) };
   }
   async recordRecoveryInspect(options) { return inspectRecordRecovery(this.root, options); }
   async developmentReports() {
@@ -163,9 +177,11 @@ export class Workbench {
   async recordRecoveryApply(options) { return applyRecordRecovery(this.root, options); }
   async savePlan(input) {
     const plan = normalizePlan(input);
-    await this.store.transaction(state => {
+    await this.store.transaction(async state => {
       if (state.plan && digest(state.plan) === digest(plan)) return;
       if (state.tasks.some(t => t.status === 'running')) throw fault('TASK_RUNNING', '请先结束或标记当前任务失败，再修改方案');
+      const policy = await planningPolicy(this.root, state);
+      if (policy) state.planningPolicy = policy;
       event(state, 'plan-revised', { previousPlan: state.plan, previousApproval: state.approval, planHash: digest(plan) });
       state.plan = plan;
       state.approval = null;
@@ -219,17 +235,21 @@ export class Workbench {
     });
   }
   async updateTask({ taskId, action, summary, evidence = [], executionId, checkMode = 'auto', checkReason = '' }, { sessionId, signal, localUser = false } = {}) {
+    const submitting = ['submit', 'fail'].includes(action);
     if (!['auto', 'static'].includes(checkMode)) throw fault('INVALID_CHECK_MODE', '检查方式必须为 auto 或 static');
     if (checkMode === 'static') checkReason = text(checkReason, '仅做文件检查的原因');
     if (!['start', 'submit', 'fail', 'retry'].includes(action)) throw fault('INVALID_ACTION', '不支持的任务动作');
     if (['submit', 'fail'].includes(action)) summary = text(summary, '变更说明');
     if (!Array.isArray(evidence) || evidence.length > 30 || evidence.some(e => !e || !['file', 'log', 'test', 'screenshot', 'manual'].includes(e.type) || typeof e.detail !== 'string' || !e.detail.trim() || e.detail.length > 12000)) throw fault('INVALID_EVIDENCE', 'evidence 必须是最多 30 条的数组，例如 [{"type":"test","detail":"实际命令、结果与未覆盖项"}]。type 仅支持 file、log、test、screenshot、manual；detail 需要 1 至 12000 字的非空文字。请修正参数，不必查找插件源码。');
     if (action === 'submit' && !evidence.length) throw fault('MISSING_EVIDENCE', '提交验收时必须记录验证证据和未覆盖项');
-    const submitting = ['submit', 'fail'].includes(action);
     const requestHash = submitting ? submissionHash({ action, summary, evidence, executionId, checkMode, checkReason }) : null;
     if (submitting) {
       const current = await this.store.read();
-      const check = current.automaticChecks?.find(item => item.taskId === taskId && item.executionId === executionId && item.requestHash === requestHash);
+      // Older restricted profiles normalized every submission to this static hash.
+      // Replays keep the original evidence. A new diagnosis can run the engine.
+      const legacyHash = this.restrictedProduction ? submissionHash({ action, summary, evidence, executionId, checkMode: 'static', checkReason: legacyRestrictedCheckReason }) : null;
+      const check = current.automaticChecks?.find(item => item.taskId === taskId && item.executionId === executionId &&
+        (item.requestHash === requestHash || (legacyHash && item.mode === 'static' && item.requestHash === legacyHash)));
       const task = current.tasks.find(item => item.id === taskId);
       if (check && task?.execution?.id === executionId && task.status === (action === 'submit' ? 'awaiting-review' : 'failed')) {
         requireApproval(current);
@@ -262,8 +282,8 @@ export class Workbench {
         await assertNoFileRecovery(this.root, state);
         if (state.tasks.some(t => t.status === 'running')) throw fault('TASK_RUNNING', '已有任务执行中');
         if (state.approval?.developmentMode === 'continuous') {
-          const snapshot = await inspectProject(this.root), stored = state.diagnostics.at(-1);
-          const report = stored ? { ...stored, stale: stored.stale || !snapshot.complete || stored.fingerprint !== snapshot.fingerprint || stored.workflowFingerprint !== diagnosisContext(state) } : null;
+          const snapshot = await inspectProject(this.root);
+          const report = currentDiagnosis(state.diagnostics.at(-1), state, snapshot, await this.lifecycleEngineIdentity());
           if (task.diagnosisRepair && !task.diagnosisRepair.started && task.diagnosisRepair.fingerprint !== snapshot.fingerprint) throw fault('STALE_REPAIR_REQUEST', '修复开始前工程已变化，请重新检查问题。');
           if (!taskCanStart(task, { tasks: state.tasks, mode: 'continuous', report, planHash: digest(state.plan) })) throw fault('DEPENDENCY_PENDING', '连续制作条件尚未满足：先处理失败任务或更新工程检查；人工试玩状态不会自动通过。');
         } else if (task.dependsOn.some(id => state.tasks.find(t => t.id === id)?.status !== 'accepted')) throw fault('DEPENDENCY_PENDING', '前置任务尚未通过验收');
@@ -323,7 +343,7 @@ export class Workbench {
       if (expectedReviewVersion !== undefined && expectedReviewVersion !== reviewVersion) throw fault('STALE_REVIEW', '验收记录已有更新，请重新打开核对，不覆盖后续意见');
       const covered = validateAcceptanceItems(state.plan, coveredAcceptance);
       if (!accepted && covered.length) throw fault('INVALID_REVIEW', '退回任务不能同时标记验收条件通过');
-      const snapshot = accepted && covered.length ? await inspectProject(this.root) : null;
+      const snapshot = accepted ? await inspectProject(this.root) : null;
       if (snapshot && expectedProjectFingerprint !== undefined && expectedProjectFingerprint !== snapshot.fingerprint) throw fault('STALE_REVIEW_FILES', '打开验收窗口后工程文件有变化，请重新打开并核对后再确认');
       if (task.review) (task.reviewHistory ??= []).push(task.review);
       task.status = accepted ? 'accepted' : 'failed';
@@ -339,8 +359,9 @@ export class Workbench {
       const pending = (state.automaticChecks ?? []).filter(check => check.status === 'checking');
       if (pending.some(check => checkHealth(check)?.state !== 'interrupted')) throw fault('CHECK_PENDING', '自动检查仍在执行或宿主状态不明，请稍后重试；不会同时启动另一轮引擎检查。');
       if (runImport) await assertNoFileRecovery(this.root, state);
-      const report = await diagnose(this.root, state, { enginePath: this.enginePath, runImport, signal });
-      report.origin = { type: 'manual', mode: runImport ? 'engine' : 'quick' };
+      const skipEngineReason = this.restrictedProduction && !runImport ? '快速检查只核对项目文件' : undefined;
+      const report = await diagnose(this.root, state, { enginePath: this.enginePath, runImport, signal, skipEngineReason, isolateRuntime: this.restrictedProduction });
+      report.origin = { type: 'manual', mode: skipEngineReason ? 'static' : runImport ? 'engine' : 'quick' };
       state.diagnostics.push(report);
       for (const check of state.automaticChecks ?? []) if (pending.some(item => item.id === check.id) && check.status === 'checking') { check.status = 'failed'; check.message = '原检查宿主已退出；已由本次手动检查替代。'; }
       event(state, 'diagnosis-created', { reportId: report.id, stale: report.stale });
@@ -393,10 +414,17 @@ export class Workbench {
       return { ...result, verification: { status: 'incomplete', reason: error.message }, message: '指定文件已恢复，但后续检查未完成。请重新诊断，不要据此认定功能已恢复。' };
     }
   }
-  async knowledge(options = {}) { return recordKnowledgeSearch(this.root, options, await searchKnowledge(options, projectLessonEntries(await this.store.read())), 'requested'); }
+  async knowledge(options = {}) {
+    const result = await searchKnowledge(options, projectLessonEntries(await this.store.read()));
+    if (options.mode === 'browse' || options.mode === 'recommend') return result;
+    return recordKnowledgeSearch(this.root, options, result, 'requested');
+  }
   // User feedback is not a model tool or a claim that a recipe passed runtime tests.
   async knowledgeFeedback(options) { return recordKnowledgeFeedback(this.root, options); }
-  async engineReference(options) { return lookupEngineReference(this, options); }
+  async engineReference(options) {
+    if (this.restrictedProduction) throw fault('ISOLATION_REQUIRED', '此配置暂不能从引擎生成 API 参考，可查阅项目知识与对应版本文档');
+    return lookupEngineReference(this, options);
+  }
   async suggestion({ reportId, issueId, requestRepair = false }) {
     if (!requestRepair) return prepareSuggestion(this.root, await this.store.read(), reportId, issueId);
     return this.store.transaction(async state => {

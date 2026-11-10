@@ -4,8 +4,8 @@ import { runtimeIssues } from './runtime-observation.mjs';
 
 // Collect file output before interpreting exit status. A failing process often
 // leaves its most useful error only in this file, not in stdout or stderr.
-export async function collectBuildProcess(executable, args, { cwd, timeoutMs, signal, logFile } = {}) {
-  const result = await runProcess(executable, args, { cwd, timeoutMs, signal });
+export async function collectBuildProcess(executable, args, { cwd, timeoutMs, signal, logFile, run = runProcess, windowed = false } = {}) {
+  const result = await run(executable, args, { cwd, timeoutMs, signal, windowed });
   if (logFile) {
     let handle;
     try {
@@ -25,6 +25,6 @@ export async function collectBuildProcess(executable, args, { cwd, timeoutMs, si
       result.fileLogError = error.code ?? 'READ_FAILED';
     } finally { await handle?.close(); }
   }
-  result.issues = runtimeIssues([result.stdout, result.stderr, result.fileLog].filter(Boolean).join('\n'));
+  result.issues = runtimeIssues([result.stdout, result.stderr, result.fileLog].filter(Boolean).join('\n'), { isolateRuntime: result.sandbox === 'windows-lpac' });
   return result;
 }

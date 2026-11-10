@@ -10,13 +10,14 @@ const active = job => ['running', 'cancelling'].includes(job.state.status);
 const blocking = job => active(job) || job.state.status === 'unconfirmed';
 const instances = new WeakMap();
 export function runtimeJobs(controller) {
-  if (!instances.has(controller)) instances.set(controller, new RuntimeJobs({ persist: true }));
+  if (!instances.has(controller)) instances.set(controller, new RuntimeJobs({ persist: true, isolateRuntime: controller.isolateRuntime }));
   return instances.get(controller);
 }
 
 export class RuntimeJobs {
-  constructor({ run = observeRuntime, outputParent = os.tmpdir(), persist = false } = {}) {
+  constructor({ run = observeRuntime, outputParent = os.tmpdir(), persist = false, isolateRuntime = false } = {}) {
     this.run = run; this.outputParent = outputParent; this.jobs = new Map(); this.persist = persist; this.loaded = new Set();
+    this.isolateRuntime = isolateRuntime;
   }
   async restore(root) {
     if (!this.persist || (this.loaded.has(root) && ![...this.jobs.values()].some(job => job.root === root && job.state.status === 'unconfirmed'))) return;
@@ -60,7 +61,7 @@ export class RuntimeJobs {
     if (!wb.enginePath) throw fault('ENGINE_REQUIRED', '请先配置 Godot，再运行游戏检查');
     if (typeof requestId !== 'string' || !/^[\w-]{8,80}$/.test(requestId)) throw fault('INVALID_REQUEST', '运行请求标识无效');
     const normalized = validateScenario(scenario);
-    const signature = JSON.stringify({ engine: wb.enginePath, scenario: normalized });
+    const signature = JSON.stringify({ engine: wb.enginePath, scenario: normalized, ...(this.isolateRuntime ? { sandbox: 'windows-appcontainer-window-v1' } : {}) });
     for (const job of this.jobs.values()) if (job.root === wb.root && job.requestId === requestId) {
       if (job.signature !== signature) throw fault('REQUEST_CONFLICT', '同一运行请求的内容已改变，请使用新的请求标识');
       return this.snapshot(job);
@@ -74,7 +75,7 @@ export class RuntimeJobs {
       if (old) this.jobs.delete(old[0]);
     }
     // Capture root and engine now; later project selection must not retarget this run.
-    const options = { projectRoot: wb.root, engine: wb.enginePath, outputParent: this.outputParent, scenario: normalized, signal: abort.signal };
+    const options = { projectRoot: wb.root, engine: wb.enginePath, outputParent: this.outputParent, scenario: normalized, signal: abort.signal, isolateRuntime: this.isolateRuntime };
     job.done = Promise.resolve().then(async () => {
       // Persist intent before starting the engine. A failed journal write must
       // not leave an unrecorded game process running.
@@ -131,8 +132,9 @@ export class RuntimeJobs {
     const job = this.find(root, id);
     if (!job?.result || job.state.restored) throw fault('EVIDENCE_UNAVAILABLE', '详细依据未保留在当前宿主中；历史摘要仍保留，不会自动重跑');
     const result = job.result;
-    const logs = phase => phase ? { exitCode: phase.exitCode, timedOut: phase.timedOut, truncated: phase.truncated, stdout: phase.stdout.slice(0, 16000), stderr: phase.stderr.slice(0, 16000), displayTruncated: phase.stdout.length > 16000 || phase.stderr.length > 16000 } : null;
-    return structuredClone({ ...this.snapshot(job), root: result.root, observations: result.observations, issues: result.issues, importIssues: result.importIssues, imported: logs(result.imported), execution: logs(result.execution), frameTiming: result.frameTiming, sandbox: false });
+    const logs = phase => phase ? { exitCode: phase.exitCode, timedOut: phase.timedOut, truncated: phase.truncated, stdout: phase.stdout.slice(0, 16000), stderr: phase.stderr.slice(0, 16000), displayTruncated: phase.stdout.length > 16000 || phase.stderr.length > 16000,
+      ...(phase.sandbox ? { sandbox: phase.sandbox } : {}) } : null;
+    return structuredClone({ ...this.snapshot(job), root: result.root, observations: result.observations, issues: result.issues, importIssues: result.importIssues, imported: logs(result.imported), execution: logs(result.execution), frameTiming: result.frameTiming, sandbox: result.sandbox === true });
   }
   async currentEvidence(root, id) {
     const evidence = this.evidence(root, id); const job = this.find(root, id);
@@ -148,8 +150,12 @@ export class RuntimeJobs {
     const image = job?.result?.observations?.steps[stepIndex]?.image;
     if (!image) throw fault('EVIDENCE_UNAVAILABLE', '此步骤没有画面');
     const file = await confined(job.result.root, image);
-    if ((await fs.stat(file)).size > 8_000_000) throw fault('EVIDENCE_TOO_LARGE', '画面过大，请使用更小的窗口重新检查');
+    const stat = await fs.lstat(file);
+    if (!stat.isFile() || stat.nlink !== 1) throw fault('INVALID_EVIDENCE', '画面必须是独立普通文件');
+    const tooLarge = () => fault('EVIDENCE_TOO_LARGE', '画面过大，请使用更小的窗口重新检查');
+    if (stat.size > 8_000_000) throw tooLarge();
     const bytes = await fs.readFile(file);
+    if (bytes.length > 8_000_000) throw tooLarge();
     if (!bytes.subarray(0, 8).equals(Buffer.from([137,80,78,71,13,10,26,10]))) throw fault('INVALID_EVIDENCE', '画面文件不是 PNG');
     return { dataUrl: `data:image/png;base64,${bytes.toString('base64')}` };
   }

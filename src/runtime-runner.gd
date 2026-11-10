@@ -70,7 +70,9 @@ func run() -> void:
 					event.physical_keycode = int(step.code)
 					event.pressed = step.pressed
 					event.echo = step.echo
-					root.push_input(event, true)
+					# Feed InputMap state as well as node callbacks.
+					Input.parse_input_event(event)
+					Input.flush_buffered_events()
 					await process_frame
 				"capture":
 					await RenderingServer.frame_post_draw

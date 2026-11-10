@@ -11,19 +11,56 @@ const catalogPath = fileURLToPath(new URL('../knowledge/catalog.json', import.me
 const knowledgeRoot = path.dirname(catalogPath);
 export const categories = ['engine', 'design', 'engineering', 'feel', 'production'];
 export const stages = ['intake', 'plan', 'implement', 'diagnose', 'verify', 'finish'];
+// Explicit starting points, not a claim that these recipes fit every project.
+const recommendedIds = {
+  intake: ['production-planning', 'design-loop', 'engine-scenes', 'production-assets'],
+  plan: ['production-planning', 'design-loop', 'engine-scenes', 'feel-jump'],
+  implement: ['engineering-state-machine', 'engine-scenes', 'feel-buffer', 'production-milestones'],
+  diagnose: ['production-bugfix', 'engine-run', 'engineering-save', 'feel-jump'],
+  verify: ['production-evidence', 'engine-export', 'engineering-save', 'design-playtest'],
+  finish: ['production-release', 'engine-export', 'production-evidence', 'production-assets'],
+};
+const byId = (a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+const summaryOnly = ({ body, bodyHash, ...summary }) => summary;
 function tokens(text) {
   const normalized = text.replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase().replace(/帮我|一下|如何|怎么|为什么|什么|目前|现在|一个|需要|可以|能不能|游戏|项目|\b(?:godot|please|the|with)\b/gi, ' ');
   const parts = normalized.match(/0x[0-9a-f]+|[a-z_][a-z0-9_]*|[\p{Script=Han}]+/gu) ?? [];
   return [...new Set(parts.flatMap(part => /^[\p{Script=Han}]+$/u.test(part) && part.length > 2 ? [part, ...Array.from({ length: part.length - 1 }, (_, i) => part.slice(i, i + 2))] : [part]))];
 }
-export async function searchKnowledge({ query = '', stage = 'plan', limit = 5, id } = {}, projectEntries = []) {
+export async function searchKnowledge({ query = '', stage = 'plan', limit = 5, id, mode = 'search', category, offset = 0 } = {}, projectEntries = []) {
   if (!stages.includes(stage)) throw fault('INVALID_STAGE', `未知任务阶段。stage 只能为 ${stages.join('、')}，检索时也可省略。`);
   if (!Number.isInteger(limit) || limit < 1 || limit > 15) throw fault('INVALID_LIMIT', '检索条数必须为 1 至 15');
   if (typeof query !== 'string' || query.length > 2000) throw fault('INVALID_QUERY', '检索问题需要不超过 2000 字的文字');
+  if (!['search', 'browse', 'recommend'].includes(mode)) throw fault('INVALID_KNOWLEDGE_MODE', '未知知识查看方式');
+  if (!Number.isSafeInteger(offset) || offset < 0 || (mode !== 'browse' && offset !== 0)) throw fault('INVALID_OFFSET', '知识分页位置无效');
+  if (category !== undefined && (mode !== 'browse' || !categories.includes(category))) throw fault('INVALID_CATEGORY', '请选择已有知识分类');
+  if (mode !== 'search' && (id !== undefined || query.trim())) throw fault('INVALID_QUERY', '浏览或推荐不能同时指定检索问题或条目');
   const raw = await fs.readFile(catalogPath, 'utf8'); const catalog = JSON.parse(raw);
   catalog.entries.push(...projectEntries);
   const coverage = Object.fromEntries(categories.map(category => [category, catalog.entries.filter(e => e.category === category).length]));
   const base = { coverage, note: `${catalog.coverageNote}${projectEntries.length ? ' 含本项目沉淀经验；请区分自动提炼与人工核对，均不代表工具独立复验。' : ''}`, indexHash: digest({ catalog: raw, projectEntries }), updatedAt: catalog.updatedAt };
+  if (mode === 'browse') {
+    const entries = catalog.entries.filter(entry => category === undefined || entry.category === category).sort(byId);
+    const results = entries.slice(offset, offset + limit).map(summaryOnly);
+    return { ...base, mode, results, total: entries.length, nextOffset: offset + results.length < entries.length ? offset + results.length : null,
+      status: results.length ? 'matched' : 'no-match', nextAction: '选择条目查看做法、适用条件和来源' };
+  }
+  if (mode === 'recommend') {
+    const eligible = catalog.entries.filter(entry => entry.stages.includes(stage)).sort(byId);
+    const chosen = recommendedIds[stage].map(id => eligible.find(entry => entry.id === id)).filter(Boolean).slice(0, limit);
+    const seen = new Set(chosen.map(entry => entry.id));
+    // Fill larger requests round-robin across available categories, rather than
+    // allowing an alphabetically early category to occupy the whole first page.
+    while (chosen.length < Math.min(limit, eligible.length)) {
+      for (const group of categories) {
+        const entry = eligible.find(entry => entry.category === group && !seen.has(entry.id));
+        if (entry) { chosen.push(entry); seen.add(entry.id); }
+        if (chosen.length === limit) break;
+      }
+    }
+    return { ...base, mode, results: chosen.map(summaryOnly), total: eligible.length, nextOffset: null,
+      status: chosen.length ? 'matched' : 'no-match', nextAction: '从当前阶段的做法开始，或浏览全部知识' };
+  }
   if (id !== undefined) {
     if (typeof id !== 'string' || !/^[a-z][a-z0-9-]{1,100}$/.test(id)) throw fault('INVALID_RECIPE', '知识条目标识不正确');
     const entry = catalog.entries.find(entry => entry.id === id);
