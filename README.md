@@ -2,15 +2,30 @@
 
 在 DeepSeek Harness 中规划、制作和验证 Godot 独立游戏。用卡片入口新建或接入工程，跟进开发计划、诊断和试玩反馈。
 
-## 安装
+## 安装到 DSH
 
-1. 使用 Windows 上的 DeepSeek Harness **0.2.1-rc.2**。
-2. 打开「插件 → 添加插件」，填入下方的 GitHub 发布地址。也可开启自定义插件索引，在「发现 → 添加索引源」中添加下方索引。
-3. 安装并启用后，保存工作并完全退出 DSH，再打开「游戏开发」。可以稍后在工作台内配置 Godot。
+使用 Windows 上的 DeepSeek Harness **0.2.1-rc.2**。
 
-- Git 安装地址：`git+https://github.com/Dogegg-1/dsh-godot-workbench-plugin.git#v0.1.1`
-- 预构建包：[godot-workbench-0.1.1.tgz](https://github.com/Dogegg-1/dsh-godot-workbench-plugin/releases/download/v0.1.1/godot-workbench-0.1.1.tgz)
-- 发现索引：`https://raw.githubusercontent.com/Dogegg-1/dsh-godot-workbench-plugin/main/index.json`
+1. 在 DSH 里打开「插件 → 添加插件」，粘贴下面的地址，点击「安装」和「立即启用」。
+
+```text
+https://github.com/Dogegg-1/dsh-godot-workbench-plugin/releases/download/v0.1.1/godot-workbench-0.1.1.tgz
+```
+
+2. 保存工作，完全退出并重开 DSH，然后点「游戏开发」。可以稍后在工作台内配置 Godot。
+
+下载连不上时，可以把[安装包](https://github.com/Dogegg-1/dsh-godot-workbench-plugin/releases/download/v0.1.1/godot-workbench-0.1.1.tgz)传到这台电脑，在同一个「添加插件」窗口选择本地文件。保留文件原样即可。
+
+<details>
+<summary>发布者索引</summary>
+
+需要订阅后续版本时，可在 DSH 启用「自定义插件索引」，把下方地址添加到「发现」。
+
+```text
+https://raw.githubusercontent.com/Dogegg-1/dsh-godot-workbench-plugin/main/index.json
+```
+
+</details>
 
 ## 开始使用
 
