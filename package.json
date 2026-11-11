@@ -1,6 +1,6 @@
 {
   "name": "@xingyou/godot-workbench",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Local Godot planning, knowledge and diagnosis tools for DeepSeek Harness",
   "type": "module",
   "exports": {

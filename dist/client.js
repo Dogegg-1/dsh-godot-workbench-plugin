@@ -11,9 +11,9 @@ var __export = (target, all) => {
 };
 var __copyProps = (to, from, except, desc) => {
   if (from && typeof from === "object" || typeof from === "function") {
-    for (let key4 of __getOwnPropNames(from))
-      if (!__hasOwnProp.call(to, key4) && key4 !== except)
-        __defProp(to, key4, { get: () => from[key4], enumerable: !(desc = __getOwnPropDesc(from, key4)) || desc.enumerable });
+    for (let key3 of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key3) && key3 !== except)
+        __defProp(to, key3, { get: () => from[key3], enumerable: !(desc = __getOwnPropDesc(from, key3)) || desc.enumerable });
   }
   return to;
 };
@@ -47,9 +47,9 @@ function projectSessionGroups(configuration, sessions, { archivedSessionIds = []
   const registered = [...configuration?.projectRoot ? [configuration] : [], ...configuration?.projects ?? [], ...configuration?.recentProjects ?? []];
   const groups = /* @__PURE__ */ new Map();
   for (const project of registered) {
-    const key4 = projectPathKey(project.projectRoot);
-    if (!key4 || groups.has(key4)) continue;
-    groups.set(key4, { key: key4, projectRoot: project.projectRoot, enginePath: project.enginePath ?? "", title: project.title || project.projectRoot.replaceAll("\\", "/").replace(/\/+$/, "").split("/").at(-1) || project.projectRoot, selected: key4 === currentKey, sessions: [], runningCount: 0 });
+    const key3 = projectPathKey(project.projectRoot);
+    if (!key3 || groups.has(key3)) continue;
+    groups.set(key3, { key: key3, projectRoot: project.projectRoot, enginePath: project.enginePath ?? "", title: project.title || project.projectRoot.replaceAll("\\", "/").replace(/\/+$/, "").split("/").at(-1) || project.projectRoot, selected: key3 === currentKey, sessions: [], runningCount: 0 });
   }
   const archived = new Set(archivedSessionIds), seen = /* @__PURE__ */ new Set();
   for (const id of sessions?.ids ?? []) {
@@ -87,21 +87,21 @@ function projectSessionGroups(configuration, sessions, { archivedSessionIds = []
 
 // src/plan-start.mjs
 var prefix = "plan-start:";
-function planStartHash(key4) {
-  if (typeof key4 !== "string") return null;
-  if (key4.startsWith(prefix)) return key4.slice(prefix.length).split("@")[0];
-  if (key4.startsWith("plan-task:")) return key4.split(":")[1];
+function planStartHash(key3) {
+  if (typeof key3 !== "string") return null;
+  if (key3.startsWith(prefix)) return key3.slice(prefix.length).split("@")[0];
+  if (key3.startsWith("plan-task:")) return key3.split(":")[1];
   return null;
 }
-function assertPlanRequest(status, key4) {
-  const hash = planStartHash(key4);
+function assertPlanRequest(status, key3) {
+  const hash = planStartHash(key3);
   if (hash === null) return;
   if (status.lifecycle?.mode && !["prototype", "production", "polish"].includes(status.lifecycle.stage)) throw new Error("\u5F53\u524D\u4E0D\u5728\u5236\u4F5C\u9636\u6BB5\uFF0C\u8BF7\u5148\u5B8C\u6210\u8BBE\u8BA1\u786E\u8BA4\uFF0C\u6216\u5728\u6982\u89C8\u8BB0\u5F55\u4E0B\u4E00\u8F6E\u4FEE\u7F2E\u3002");
   if (!status.approved || !/^[a-f0-9]{64}$/.test(hash) || status.planHash !== hash) throw new Error("\u5F00\u53D1\u8BA1\u5212\u5DF2\u53D8\u5316\u6216\u5C1A\u672A\u786E\u8BA4\uFF0C\u5236\u4F5C\u8BF7\u6C42\u5C1A\u672A\u53D1\u9001\u3002\u8BF7\u91CD\u65B0\u6838\u5BF9\u8BA1\u5212\u3002");
-  const requestedMode = key4.includes("@") ? key4.split("@").at(-1) : "stepwise";
+  const requestedMode = key3.includes("@") ? key3.split("@").at(-1) : "stepwise";
   if (requestedMode !== (status.developmentMode ?? "stepwise")) throw new Error("\u5236\u4F5C\u8282\u594F\u5DF2\u53D8\u5316\uFF0C\u8BF7\u91CD\u65B0\u51C6\u5907\u5236\u4F5C\u8BF7\u6C42\uFF1B\u65E7\u8BF7\u6C42\u5C1A\u672A\u53D1\u9001\u3002");
-  if (!key4.startsWith("plan-task:")) return;
-  const task = status.tasks?.find((task2) => task2.currentPlan && taskContinueKey(hash, task2, status.developmentMode) === key4);
+  if (!key3.startsWith("plan-task:")) return;
+  const task = status.tasks?.find((task2) => task2.currentPlan && taskContinueKey(hash, task2, status.developmentMode) === key3);
   const ready = status.developmentMode === "continuous" ? task?.canStart === true : task && (task.dependsOn ?? []).every((id) => status.tasks.some((other) => other.id === id && other.currentPlan && other.status === "accepted"));
   if (!task || task.status !== "pending" || !ready || status.tasks.some((other) => other.currentPlan && other.status === "running")) throw new Error("\u4EFB\u52A1\u6216\u524D\u7F6E\u68C0\u67E5\u5DF2\u53D8\u5316\uFF0C\u5C1A\u672A\u53D1\u9001\u3002\u8BF7\u6838\u5BF9\u5F53\u524D\u4E0B\u4E00\u6B65\u3002");
 }
@@ -109,9 +109,9 @@ function taskContinueKey(hash, task, mode = "stepwise") {
   return `plan-task:${hash}:${encodeURIComponent(task.id)}:${encodeURIComponent(task.updatedAt ?? task.createdAt ?? "")}@${mode}`;
 }
 function taskContinueRequest(status, task) {
-  const key4 = taskContinueKey(status.planHash, task, status.developmentMode);
-  assertPlanRequest(status, key4);
-  return { key: key4, text: `\u8BF7\u7EE7\u7EED\u5DF2\u786E\u8BA4\u8BA1\u5212\u4E2D\u7684\u4EFB\u52A1\u201C${task.title}\u201D\u3002\u5148\u8C03\u7528 gamedev_status \u6838\u5BF9\u65B9\u6848\u7248\u672C ${status.planHash}\u3001\u4EFB\u52A1 ${task.id} \u4ECD\u5F85\u5F00\u59CB\u4E14canStart\u4E3Atrue\uFF1B\u6709\u53D8\u5316\u5148\u505C\u6B62\u8BF4\u660E\u3002${modeInstruction(status.developmentMode)}\u8BFB\u53D6 implement \u9636\u6BB5\u4E0A\u4E0B\u6587\u548C\u5DF2\u6709\u6539\u52A8\uFF0C\u4E0D\u8986\u76D6\u624B\u5DE5\u4FEE\u6539\u3001\u4E0D\u6269\u5927\u8303\u56F4\u3002\u5B9E\u9645\u68C0\u67E5\u5E76\u8BB0\u5F55\u6539\u52A8\u4E0E\u9A8C\u8BC1\u4F9D\u636E\uFF0C\u4E0D\u80FD\u4EE3\u7528\u6237\u901A\u8FC7\u8BD5\u73A9\u9A8C\u6536\u3002\u6700\u540E\u7528\u7B80\u77ED\u4E2D\u6587\u8BF4\u660E\u7ED3\u679C\u548C\u4E00\u4E2A\u4E0B\u4E00\u6B65\u3002` };
+  const key3 = taskContinueKey(status.planHash, task, status.developmentMode);
+  assertPlanRequest(status, key3);
+  return { key: key3, text: `\u8BF7\u7EE7\u7EED\u5DF2\u786E\u8BA4\u8BA1\u5212\u4E2D\u7684\u4EFB\u52A1\u201C${task.title}\u201D\u3002\u5148\u8C03\u7528 gamedev_status \u6838\u5BF9\u65B9\u6848\u7248\u672C ${status.planHash}\u3001\u4EFB\u52A1 ${task.id} \u4ECD\u5F85\u5F00\u59CB\u4E14canStart\u4E3Atrue\uFF1B\u6709\u53D8\u5316\u5148\u505C\u6B62\u8BF4\u660E\u3002${modeInstruction(status.developmentMode)}\u8BFB\u53D6 implement \u9636\u6BB5\u4E0A\u4E0B\u6587\u548C\u5DF2\u6709\u6539\u52A8\uFF0C\u4E0D\u8986\u76D6\u624B\u5DE5\u4FEE\u6539\u3001\u4E0D\u6269\u5927\u8303\u56F4\u3002\u5B9E\u9645\u68C0\u67E5\u5E76\u8BB0\u5F55\u6539\u52A8\u4E0E\u9A8C\u8BC1\u4F9D\u636E\uFF0C\u4E0D\u80FD\u4EE3\u7528\u6237\u901A\u8FC7\u8BD5\u73A9\u9A8C\u6536\u3002\u6700\u540E\u7528\u7B80\u77ED\u4E2D\u6587\u8BF4\u660E\u7ED3\u679C\u548C\u4E00\u4E2A\u4E0B\u4E00\u6B65\u3002` };
 }
 function modeInstruction(mode) {
   return mode === "continuous" ? "\u7528\u6237\u9009\u62E9\u8FDE\u7EED\u5236\u4F5C\u3001\u96C6\u4E2D\u8BD5\u73A9\u3002\u6309\u5DF2\u786E\u8BA4\u8303\u56F4\u5206\u5C0F\u4EFB\u52A1\u63A8\u8FDB\uFF0C\u6BCF\u6B21\u63D0\u4EA4\u540E\u8BFB\u53D6\u6700\u65B0\u72B6\u6001\uFF1B\u53EA\u6709\u5DE5\u7A0B\u68C0\u67E5\u901A\u8FC7\u4E14\u4E0B\u4E00\u4EFB\u52A1canStart\u4E3Atrue\u624D\u80FD\u7EE7\u7EED\u3002\u68C0\u67E5\u5931\u8D25\u3001\u7F3A\u5C11\u5173\u952E\u8BBE\u8BA1\u51B3\u5B9A\u6216\u5230\u8FBE\u53EF\u73A9\u4EA4\u4ED8\u70B9\u5C31\u505C\u6B62\u5E76\u7ED9\u51FA\u4E0B\u4E00\u6B65\uFF1B\u4FDD\u7559\u5168\u90E8\u4EBA\u5DE5\u5F85\u9A8C\u6536\u72B6\u6001\uFF0C\u4E0D\u65B0\u5EFA\u65E0\u4F9D\u8D56\u4EFB\u52A1\u7ED5\u884C\u3002" : "\u7528\u6237\u9009\u62E9\u9010\u9879\u786E\u8BA4\u3002\u53EA\u5B8C\u6210\u5F53\u524D\u4E00\u4E2A\u5C0F\u4EFB\u52A1\uFF0C\u63D0\u4EA4\u540E\u7B49\u5F85\u7528\u6237\u8BD5\u73A9\u9A8C\u6536\uFF0C\u518D\u5F00\u59CB\u4F9D\u8D56\u5B83\u7684\u4EFB\u52A1\u3002";
@@ -130,23 +130,23 @@ var prototypePlanningGuide = "\u5148\u6838\u5BF9\u9879\u76EE\u73B0\u6709\u65B9\u
 
 // src/plan-clarification.mjs
 var prefix2 = "gdd-refine:";
-var isPlanClarification = (key4) => typeof key4 === "string" && key4.startsWith(prefix2);
-function assertPlanClarification(status, key4) {
-  if (!isPlanClarification(key4)) return;
-  const [, projectId, planHash] = key4.split(":");
+var isPlanClarification = (key3) => typeof key3 === "string" && key3.startsWith(prefix2);
+function assertPlanClarification(status, key3) {
+  if (!isPlanClarification(key3)) return;
+  const [, projectId, planHash] = key3.split(":");
   if (status.projectId !== projectId || (status.planHash ?? "none") !== planHash || status.approved || status.assessment?.ready) {
     throw new Error("\u65B9\u6848\u5DF2\u66F4\u65B0\uFF0C\u8BF7\u8FD4\u56DE\u8BA1\u5212\u9875\u67E5\u770B\u5F53\u524D\u9700\u8981\u786E\u8BA4\u7684\u4E8B\u9879\u3002");
   }
 }
 function planClarificationRequest(status) {
-  const key4 = `${prefix2}${status.projectId}:${status.planHash ?? "none"}`;
-  assertPlanClarification(status, key4);
-  return { key: key4, text: `\u8BF7\u7EE7\u7EED\u548C\u6211\u6572\u5B9A\u672C\u9879\u76EE\u7684\u6E38\u620F\u8BBE\u8BA1\u3002\u5148\u7528 gamedev_status \u8BFB\u53D6\u5F53\u524D\u8349\u7A3F\u548C assessment.questions\uFF0C\u4EE5\u5F53\u524D\u72B6\u6001\u4E3A\u51C6\u3002${prototypePlanningGuide}` };
+  const key3 = `${prefix2}${status.projectId}:${status.planHash ?? "none"}`;
+  assertPlanClarification(status, key3);
+  return { key: key3, text: `\u8BF7\u7EE7\u7EED\u548C\u6211\u6572\u5B9A\u672C\u9879\u76EE\u7684\u6E38\u620F\u8BBE\u8BA1\u3002\u5148\u7528 gamedev_status \u8BFB\u53D6\u5F53\u524D\u8349\u7A3F\u548C assessment.questions\uFF0C\u4EE5\u5F53\u524D\u72B6\u6001\u4E3A\u51C6\u3002${prototypePlanningGuide}` };
 }
 
 // src/send-project-message.mjs
 function createProjectMessageSender({ sessionId, sessions, readStatus, requestIdFor: requestIdFor2, selection, revision }) {
-  return async (text, key4, expectedProjectRoot) => {
+  return async (text, key3, expectedProjectRoot) => {
     const expected = projectPathKey(expectedProjectRoot);
     const verify = () => {
       const cwd = sessions.list.getSnapshot().byId[sessionId]?.cwd;
@@ -157,12 +157,12 @@ function createProjectMessageSender({ sessionId, sessions, readStatus, requestId
       return binding2;
     };
     verify();
-    const requestId = await requestIdFor2(key4 ? `${sessionId}:${key4}` : void 0);
+    const requestId = await requestIdFor2(key3 ? `${sessionId}:${key3}` : void 0);
     const project = await readStatus();
     const binding = verify();
     if (projectPathKey(project.projectRoot) !== expected) throw new Error("\u5DE5\u4F5C\u53F0\u5DE5\u7A0B\u5DF2\u5207\u6362\uFF0C\u5EFA\u8BAE\u5C1A\u672A\u53D1\u9001\u3002\u8BF7\u56DE\u5230\u539F\u9879\u76EE\u6838\u5BF9\u540E\u91CD\u8BD5\u3002");
-    assertPlanRequest(project, key4);
-    assertPlanClarification(project, key4);
+    assertPlanRequest(project, key3);
+    assertPlanClarification(project, key3);
     const result = await binding.session.prompt([{ type: "text", text }], "queue", new AbortController().signal, requestId);
     if (!result.ok) throw new Error(result.error?.message ?? "DSH \u672A\u63A5\u53D7\u8FD9\u6761\u6D88\u606F\uFF0C\u6587\u672C\u5DF2\u4FDD\u7559\u3002");
     return result.value;
@@ -170,7 +170,7 @@ function createProjectMessageSender({ sessionId, sessions, readStatus, requestId
 }
 
 // src/diagnosis-repair.mjs
-var key = (root) => "godot-workbench:last-development:" + projectPathKey(root);
+var developmentKey = (root) => "godot-workbench:last-development:" + projectPathKey(root);
 function diagnosisSession(storage2, root) {
   try {
     return JSON.parse(storage2.getItem("godot-workbench:diagnosis:" + projectPathKey(root)) || "null")?.sessionId;
@@ -179,20 +179,76 @@ function diagnosisSession(storage2, root) {
   }
 }
 function rememberDevelopment(storage2, root, id) {
-  if (root && id && id !== diagnosisSession(storage2, root)) storage2.setItem(key(root), id);
+  if (root && id && id !== diagnosisSession(storage2, root)) storage2.setItem(developmentKey(root), id);
 }
-function createDiagnosisRepairSender({ storage: storage2, sessions, sessionId, readStatus, requestIdFor: requestIdFor2, selection, revision, isArchived, open }) {
-  return async (text, messageKey, root) => {
-    const diagnostic = diagnosisSession(storage2, root);
-    const id = sessionId === diagnostic ? storage2.getItem(key(root)) : sessionId;
-    const valid2 = () => id && id !== diagnostic && !isArchived(id) && sessions.list.getSnapshot().byId[id]?.origin !== "subagent" && projectPathKey(sessions.list.getSnapshot().byId[id]?.cwd) === projectPathKey(root);
-    if (!valid2()) throw new Error("\u8BF7\u5148\u9009\u62E9\u672C\u9879\u76EE\u7684\u5F00\u53D1\u5BF9\u8BDD\uFF0C\u518D\u53D1\u9001\u4FEE\u590D\uFF1B\u8BCA\u65AD\u5BF9\u8BDD\u4E0D\u4F1A\u4FEE\u6539\u6E38\u620F\u3002");
-    await sessions.using(id, { source: "godot-workbench-repair" }, async () => {
-      if (!valid2()) throw new Error("\u5F00\u53D1\u5BF9\u8BDD\u5DF2\u53D8\u5316\uFF0C\u4FEE\u590D\u5C1A\u672A\u53D1\u9001\u3002");
-      await createProjectMessageSender({ sessionId: id, sessions, readStatus, requestIdFor: requestIdFor2, selection, revision })(text, messageKey, root);
+function createDiagnosisRepairSender({ storage: storage2, sessions, readStatus, requestIdFor: requestIdFor2, selection, isArchived, open }) {
+  const active = /* @__PURE__ */ new Map();
+  return function send(text, messageKey, root, { sessionId, revision, onAccepted, reportId } = {}) {
+    const project = projectPathKey(root);
+    if (!project) return Promise.reject(new Error("\u65E0\u6CD5\u786E\u8BA4\u5EFA\u8BAE\u6240\u5C5E\u7684\u9879\u76EE\u3002"));
+    const pendingKey = "godot-workbench:repair-destination:" + project;
+    const previous = active.get(project);
+    if (previous) {
+      if (previous.key === messageKey && previous.text === text) return previous.promise;
+      return Promise.reject(new Error("\u672C\u9879\u76EE\u7684\u5EFA\u8BAE\u6B63\u5728\u53D1\u9001\uFF0C\u8BF7\u5148\u7B49\u5F85\u7ED3\u679C\u3002"));
+    }
+    const operation = (async () => {
+      const verify = async () => {
+        const status = await readStatus();
+        if (selection.getSnapshot() !== revision || projectPathKey(status.projectRoot) !== project) {
+          throw new Error("\u9879\u76EE\u6216\u4F1A\u8BDD\u5DF2\u53D8\u5316\uFF0C\u5EFA\u8BAE\u5C1A\u672A\u53D1\u9001\u3002");
+        }
+        if (reportId && (status.latestDiagnosis?.id !== reportId || status.latestDiagnosis.stale)) {
+          throw new Error("\u8BCA\u65AD\u62A5\u544A\u5DF2\u53D8\u5316\uFF0C\u8BF7\u91CD\u65B0\u68C0\u67E5\u540E\u5904\u7406\u5EFA\u8BAE\u3002");
+        }
+        return status;
+      };
+      const rows = () => sessions.list.getSnapshot().byId;
+      const valid2 = (id2) => {
+        const row = rows()[id2];
+        return row && id2 !== diagnosisSession(storage2, root) && !isArchived(id2) && row.origin !== "subagent" && projectPathKey(row.cwd) === project;
+      };
+      await verify();
+      const pending = JSON.parse(storage2.getItem(pendingKey) || "null");
+      if (pending && pending.root !== project) throw new Error("\u5F85\u786E\u8BA4\u5F00\u53D1\u5BF9\u8BDD\u5F52\u5C5E\u4E0D\u4E00\u81F4\uFF0C\u8BF7\u6838\u5BF9\u3002");
+      const pendingId = pending?.messageKey === messageKey ? pending?.id : null;
+      let id = [pendingId, sessionId, storage2.getItem(developmentKey(root)), ...Object.keys(rows())].find(valid2);
+      if (!id) {
+        if (pending?.creating && !rows()[pending.id]) {
+          throw new Error("\u4E0A\u6B21\u521B\u5EFA\u5F00\u53D1\u5BF9\u8BDD\u7684\u7ED3\u679C\u5C1A\u672A\u786E\u8BA4\u3002\u8BF7\u4ECE\u5DE6\u4FA7\u6253\u5F00\u672C\u9879\u76EE\u7684\u5F00\u53D1\u5BF9\u8BDD\u540E\u91CD\u8BD5\u3002");
+        }
+        await verify();
+        id = crypto.randomUUID();
+        storage2.setItem(pendingKey, JSON.stringify({ root: project, id, messageKey, creating: true }));
+        const created = await sessions.create({ cwd: root, sessionId: id });
+        if (created !== id || !valid2(id)) throw new Error("\u5F00\u53D1\u5BF9\u8BDD\u521B\u5EFA\u7ED3\u679C\u5C1A\u672A\u786E\u8BA4\uFF0C\u8BF7\u5148\u6838\u5BF9\u4F1A\u8BDD\u5217\u8868\u3002");
+      }
+      storage2.setItem(pendingKey, JSON.stringify({ root: project, id, messageKey }));
+      rememberDevelopment(storage2, root, id);
+      await sessions.using(id, { source: "godot-workbench-repair" }, async () => {
+        const readCurrent = async () => {
+          const status = await verify();
+          if (!valid2(id)) throw new Error("\u5F00\u53D1\u5BF9\u8BDD\u5DF2\u53D8\u5316\uFF0C\u5EFA\u8BAE\u5C1A\u672A\u53D1\u9001\u3002");
+          return status;
+        };
+        await createProjectMessageSender({
+          sessionId: id,
+          sessions,
+          readStatus: readCurrent,
+          requestIdFor: requestIdFor2,
+          selection,
+          revision
+        })(text, messageKey, root);
+      });
+      storage2.removeItem(pendingKey);
+      onAccepted?.();
+      if (selection.getSnapshot() === revision) await open(root, id);
+      return { sessionId: id };
+    })();
+    active.set(project, { key: messageKey, text, promise: operation });
+    operation.finally(() => active.delete(project)).catch(() => {
     });
-    if (selection.getSnapshot() === revision) await open(root, id);
-    return { sessionId: id };
+    return operation;
   };
 }
 
@@ -201,7 +257,7 @@ var busy = () => Object.assign(new Error("\u8BCA\u65AD\u5BF9\u8BDD\u8FD8\u5728\u
 function createDiagnosisConversation({ storage: storage2, sessions, readStatus, requestIdFor: requestIdFor2, isArchived = () => false }) {
   const active = /* @__PURE__ */ new Map();
   return function send(root, reportId, text, messageKey = reportId) {
-    const project = projectPathKey(root), key4 = "godot-workbench:diagnosis:" + project;
+    const project = projectPathKey(root), key3 = "godot-workbench:diagnosis:" + project;
     if (active.has(project)) return active.get(project).messageKey === messageKey ? active.get(project).promise : Promise.reject(busy());
     const promise = (async () => {
       const verify = async () => {
@@ -210,9 +266,9 @@ function createDiagnosisConversation({ storage: storage2, sessions, readStatus, 
         return status;
       };
       await verify();
-      let record = JSON.parse(storage2.getItem(key4) || "null");
+      let record = JSON.parse(storage2.getItem(key3) || "null");
       if (record && projectPathKey(record.root) !== project) throw new Error("\u8BCA\u65AD\u5BF9\u8BDD\u7684\u9879\u76EE\u5F52\u5C5E\u4E0D\u4E00\u81F4\uFF0C\u8BF7\u5148\u6838\u5BF9\u3002");
-      const save = () => storage2.setItem(key4, JSON.stringify(record));
+      const save = () => storage2.setItem(key3, JSON.stringify(record));
       if (!record) {
         record = { root, sessionId: crypto.randomUUID(), state: "prepared", sent: [] };
         save();
@@ -281,12 +337,12 @@ function createDiagnosisDispatcher({ storage: storage2, send }) {
   }
   async function request(status, { manual = false } = {}) {
     if (!manual) return;
-    const report = status.latestDiagnosis, key4 = keyFor(status);
+    const report = status.latestDiagnosis, key3 = keyFor(status);
     if (!report || report.stale) return;
     const previous = state(status);
     if (previous?.state === "sent") return;
-    if (active.has(key4)) return active.get(key4);
-    const save = (value) => storage2.setItem(key4, JSON.stringify({ reportId: report.id, ...value }));
+    if (active.has(key3)) return active.get(key3);
+    const save = (value) => storage2.setItem(key3, JSON.stringify({ reportId: report.id, ...value }));
     const operation = (async () => {
       save({ state: "sending" });
       try {
@@ -299,11 +355,11 @@ function createDiagnosisDispatcher({ storage: storage2, send }) {
         throw error;
       }
     })();
-    active.set(key4, operation);
+    active.set(key3, operation);
     try {
       return await operation;
     } finally {
-      active.delete(key4);
+      active.delete(key3);
     }
   }
   return { request, state };
@@ -1458,11 +1514,11 @@ function KnowledgeCards({ result, categoryNames: categoryNames2, verificationNam
         "\u5168\u90E8 ",
         /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: result.results.length })
       ] }),
-      categories.map((key4) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", { "aria-pressed": activeCategory === key4, onClick: () => setCategory(key4), children: [
-        categoryNames2[key4] || key4,
+      categories.map((key3) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("button", { "aria-pressed": activeCategory === key3, onClick: () => setCategory(key3), children: [
+        categoryNames2[key3] || key3,
         " ",
-        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: result.results.filter((entry) => entry.category === key4).length })
-      ] }, key4))
+        /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { children: result.results.filter((entry) => entry.category === key3).length })
+      ] }, key3))
     ] }),
     result.results.length ? /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "gw-knowledge-results gw-knowledge-deck", children: visible.map((entry) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("article", { className: "gw-knowledge-card", "aria-label": entry.title, children: [
       /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("header", { children: [
@@ -1499,11 +1555,11 @@ function KnowledgeCards({ result, categoryNames: categoryNames2, verificationNam
     ] }),
     /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("details", { className: "gw-knowledge-coverage", children: [
       /* @__PURE__ */ (0, import_jsx_runtime.jsx)("summary", { children: "\u77E5\u8BC6\u8303\u56F4\u4E0E\u68C0\u7D22\u8BF4\u660E" }),
-      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "gw-coverage", children: Object.entries(result.coverage || {}).map(([key4, count]) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { children: [
-        categoryNames2[key4] || key4,
+      /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "gw-coverage", children: Object.entries(result.coverage || {}).map(([key3, count]) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("span", { children: [
+        categoryNames2[key3] || key3,
         " ",
         /* @__PURE__ */ (0, import_jsx_runtime.jsx)("b", { children: count })
-      ] }, key4)) }),
+      ] }, key3)) }),
       /* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", { children: result.note })
     ] })
   ] });
@@ -1517,9 +1573,9 @@ function Candidate({ item, busy: busy2, onReview, onExport }) {
   const [draft, setDraft] = (0, import_react3.useState)(() => ({ title: basis?.title ?? item.title, content: basis?.content ?? item.detail, category: basis?.category ?? "engineering", applicability: basis?.applicability ?? "", verification: basis?.verification ?? "", limitations: basis?.limitations ?? "" }));
   const [confirmed, setConfirmed] = (0, import_react3.useState)(false);
   const [shareConfirmed, setShareConfirmed] = (0, import_react3.useState)(false);
-  const field = (key4, label, max) => /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("label", { children: [
+  const field = (key3, label, max) => /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("label", { children: [
     label,
-    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("textarea", { "aria-label": label, rows: 2, maxLength: max, value: draft[key4], onChange: (e46) => setDraft({ ...draft, [key4]: e46.target.value }) })
+    /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("textarea", { "aria-label": label, rows: 2, maxLength: max, value: draft[key3], onChange: (e46) => setDraft({ ...draft, [key3]: e46.target.value }) })
   ] });
   return /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("details", { className: "gw-development-report gw-lesson-candidate", children: [
     /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("summary", { children: [
@@ -1547,7 +1603,7 @@ function Candidate({ item, busy: busy2, onReview, onExport }) {
     field("content", "\u6838\u5BF9\u540E\u7684\u7ECF\u9A8C\u5185\u5BB9", 2e3),
     /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("label", { children: [
       "\u77E5\u8BC6\u5206\u7C7B",
-      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("select", { className: "gw-execution-select", "aria-label": "\u77E5\u8BC6\u5206\u7C7B", value: draft.category, onChange: (e46) => setDraft({ ...draft, category: e46.target.value }), children: [["engine", "\u5F15\u64CE"], ["design", "\u8BBE\u8BA1"], ["engineering", "\u5DE5\u7A0B"], ["feel", "\u624B\u611F"], ["production", "\u751F\u4EA7\u7BA1\u7406"]].map(([key4, label]) => /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("option", { value: key4, children: label }, key4)) })
+      /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("select", { className: "gw-execution-select", "aria-label": "\u77E5\u8BC6\u5206\u7C7B", value: draft.category, onChange: (e46) => setDraft({ ...draft, category: e46.target.value }), children: [["engine", "\u5F15\u64CE"], ["design", "\u8BBE\u8BA1"], ["engineering", "\u5DE5\u7A0B"], ["feel", "\u624B\u611F"], ["production", "\u751F\u4EA7\u7BA1\u7406"]].map(([key3, label]) => /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("option", { value: key3, children: label }, key3)) })
     ] }),
     field("applicability", "\u9002\u7528\u6761\u4EF6\u4E0E\u7248\u672C", 1e3),
     field("verification", "\u5B9E\u9645\u9A8C\u8BC1\u6B65\u9AA4\u4E0E\u7ED3\u679C", 2e3),
@@ -1662,13 +1718,13 @@ function ProjectLessons({ api }) {
       ] }),
       incoming && /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("div", { children: [
         /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("h3", { children: incoming.preview.lesson.title }),
-        Object.entries(incoming.preview.lesson).filter(([key4]) => key4 !== "title").map(([key4, value]) => /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("p", { children: [
+        Object.entries(incoming.preview.lesson).filter(([key3]) => key3 !== "title").map(([key3, value]) => /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("p", { children: [
           /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("strong", { children: [
-            { content: "\u7ECF\u9A8C", category: "\u5206\u7C7B", applicability: "\u9002\u7528\u6761\u4EF6", verification: "\u63D0\u4F9B\u8005\u8BB0\u5F55\u7684\u9A8C\u8BC1", limitations: "\u8FB9\u754C" }[key4],
+            { content: "\u7ECF\u9A8C", category: "\u5206\u7C7B", applicability: "\u9002\u7528\u6761\u4EF6", verification: "\u63D0\u4F9B\u8005\u8BB0\u5F55\u7684\u9A8C\u8BC1", limitations: "\u8FB9\u754C" }[key3],
             "\uFF1A"
           ] }),
           value
-        ] }, key4)),
+        ] }, key3)),
         /* @__PURE__ */ (0, import_jsx_runtime2.jsxs)("label", { className: "gw-lesson-confirm", children: [
           /* @__PURE__ */ (0, import_jsx_runtime2.jsx)("input", { type: "checkbox", checked: importConfirmed, onChange: (e46) => setImportConfirmed(e46.target.checked) }),
           "\u6211\u5DF2\u6838\u5BF9\u5185\u5BB9\uFF0C\u540C\u610F\u5BFC\u5165\u5230\u5F53\u524D\u9879\u76EE\u7684\u5F85\u5BA1\u6838\u5019\u9009\u3002"
@@ -1841,11 +1897,11 @@ function KnowledgeLibrary({ api, busy: busy2, perform, stage, growth, engineRefe
           "\u5168\u90E8 ",
           /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { children: total })
         ] }),
-        Object.entries(categoryNames).map(([key4, label]) => /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("button", { "aria-pressed": browse.category === key4, disabled: busy2, onClick: () => openBrowse(key4), children: [
+        Object.entries(categoryNames).map(([key3, label]) => /* @__PURE__ */ (0, import_jsx_runtime3.jsxs)("button", { "aria-pressed": browse.category === key3, disabled: busy2, onClick: () => openBrowse(key3), children: [
           label,
           " ",
-          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { children: coverage[key4] ?? 0 })
-        ] }, key4))
+          /* @__PURE__ */ (0, import_jsx_runtime3.jsx)("span", { children: coverage[key3] ?? 0 })
+        ] }, key3))
       ] }),
       result && /* @__PURE__ */ (0, import_jsx_runtime3.jsx)(
         KnowledgeCards,
@@ -2124,14 +2180,14 @@ var untested = { outcome: "not-tested", note: "" };
 function QaReview({ status, api, busy: busy2, onSaved, expanded, scopeReady }) {
   const [index, setIndex] = (0, import_react9.useState)(0), [draft, setDraft] = (0, import_react9.useState)(null), [error, setError] = (0, import_react9.useState)(""), [saving, setSaving] = (0, import_react9.useState)(false);
   const { basis, qa } = status.lifecycle;
-  const key4 = JSON.stringify([status.lifecycle.version, basis, qa.version]);
-  const stale = draft && draft.key !== key4;
+  const key3 = JSON.stringify([status.lifecycle.version, basis, qa.version]);
+  const stale = draft && draft.key !== key3;
   const readOnly = !scopeReady || Boolean(stale) || saving;
   const results = draft?.results ?? {};
   const items = status.plan?.acceptance ?? [], value = results[index] ?? untested;
   function update(patch) {
     setDraft((previous) => ({
-      ...previous ?? { key: key4, basis, version: qa.version },
+      ...previous ?? { key: key3, basis, version: qa.version },
       results: { ...previous?.results, [index]: { ...previous?.results[index] ?? untested, ...patch } }
     }));
   }
@@ -2567,7 +2623,7 @@ function TaskOverview({ status, renderTask, onDiagnose, openCoverage = false }) 
     ["running", "\u6B63\u5728\u5236\u4F5C", "\u5B8C\u6210\u540E\u4F1A\u63D0\u9192\u4F60\u67E5\u770B\u3002"],
     ["pending", "\u63A5\u4E0B\u6765\u505A", "\u6309\u4F9D\u8D56\u548C\u6240\u9009\u5236\u4F5C\u8282\u594F\u63A8\u8FDB\u3002"]
   ];
-  const select = (key4) => key4 === "review" ? review : current.filter((task) => key4 === "attention" ? ["failed", "cancelled"].includes(task.status) : task.status === key4);
+  const select = (key3) => key3 === "review" ? review : current.filter((task) => key3 === "attention" ? ["failed", "cancelled"].includes(task.status) : task.status === key3);
   const report = status.latestDiagnosis;
   const checkText = !report ? "\u5C1A\u672A\u68C0\u67E5" : report.stale ? "\u9700\u8981\u91CD\u65B0\u68C0\u67E5" : report.coverage?.engineImport === "passed" && !report.issues?.some((issue) => issue.severity === "blocking") ? "\u5DE5\u7A0B\u68C0\u67E5\u5DF2\u901A\u8FC7" : "\u67E5\u770B\u68C0\u67E5\u7ED3\u679C";
   return /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(import_jsx_runtime10.Fragment, { children: [
@@ -2587,8 +2643,8 @@ function TaskOverview({ status, renderTask, onDiagnose, openCoverage = false }) 
       ] })
     ] }),
     !current.length && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "gw-empty", children: status.approved ? "\u8BA1\u5212\u5DF2\u786E\u8BA4\uFF0C\u53EF\u4EE5\u5F00\u59CB\u7B2C\u4E00\u6B65\u5236\u4F5C\u3002" : "\u5148\u786E\u8BA4\u8BA1\u5212\uFF0C\u518D\u5F00\u59CB\u5236\u4F5C\u3002" }),
-    groups.map(([key4, title, hint]) => {
-      const tasks = select(key4);
+    groups.map(([key3, title, hint]) => {
+      const tasks = select(key3);
       return tasks.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("section", { className: "gw-task-group", "aria-label": title, children: [
         /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("header", { children: [
           /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("h2", { children: [
@@ -2599,7 +2655,7 @@ function TaskOverview({ status, renderTask, onDiagnose, openCoverage = false }) 
           /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("p", { children: hint })
         ] }),
         /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "gw-task-grid", children: tasks.map(renderTask) })
-      ] }, key4);
+      ] }, key3);
     }),
     history.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("details", { className: "gw-overview-details", children: [
       /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("summary", { children: [
@@ -2634,12 +2690,12 @@ function deliverableVersions(status) {
 function updateNotifications(previous, versions, page) {
   const unread = { ...previous?.unread };
   let changed = false;
-  for (const [key4, version] of Object.entries(versions)) {
-    if (previous && version && version !== previous.versions[key4]) {
-      unread[key4] = true;
+  for (const [key3, version] of Object.entries(versions)) {
+    if (previous && version && version !== previous.versions[key3]) {
+      unread[key3] = true;
       changed = true;
     }
-    if (key4 === page) delete unread[key4];
+    if (key3 === page) delete unread[key3];
   }
   return { versions, unread, changed };
 }
@@ -2680,20 +2736,20 @@ function useDeliverableNotices(status, page) {
   }, []);
   (0, import_react14.useEffect)(() => {
     if (!status?.projectRoot) return;
-    const key4 = `gw-deliverables:${status.projectRoot}`;
-    let previous = cache.current.get(key4);
+    const key3 = `gw-deliverables:${status.projectRoot}`;
+    let previous = cache.current.get(key3);
     if (!previous) {
       try {
-        const stored = JSON.parse(localStorage.getItem(key4));
+        const stored = JSON.parse(localStorage.getItem(key3));
         if (stored?.versions && stored?.unread) previous = stored;
       } catch {
       }
     }
     const next = updateNotifications(previous, deliverableVersions(status), page);
-    cache.current.set(key4, next);
+    cache.current.set(key3, next);
     setUnread(next.unread);
     try {
-      localStorage.setItem(key4, JSON.stringify({ versions: next.versions, unread: next.unread }));
+      localStorage.setItem(key3, JSON.stringify({ versions: next.versions, unread: next.unread }));
     } catch {
     }
     if (next.changed && !muted && sound.current?.state === "running" && !document.hidden) {
@@ -2816,25 +2872,25 @@ function useSuggestionDraft(projectRoot) {
     globalThis.addEventListener?.("godot-workbench:draft-cleared", cleared);
     return () => globalThis.removeEventListener?.("godot-workbench:draft-cleared", cleared);
   }, [root]);
-  function setInput(text, key4 = crypto.randomUUID()) {
+  function setInput(text, key3 = crypto.randomUUID()) {
     if (!root || typeof text !== "string") return;
     try {
-      if (text) storage()?.setItem(prefix3 + root, JSON.stringify({ text, key: key4 }));
+      if (text) storage()?.setItem(prefix3 + root, JSON.stringify({ text, key: key3 }));
       else storage()?.removeItem(prefix3 + root);
     } catch {
     }
-    if (current.current === root) setDraft({ root, text, key: key4, open: Boolean(text) });
+    if (current.current === root) setDraft({ root, text, key: key3, open: Boolean(text) });
   }
-  function clearSent(text, key4) {
+  function clearSent(text, key3) {
     const saved = read(root);
-    if (saved.text === text && saved.key === key4) {
+    if (saved.text === text && saved.key === key3) {
       try {
         storage()?.removeItem(prefix3 + root);
       } catch {
       }
       globalThis.dispatchEvent?.(new CustomEvent("godot-workbench:draft-cleared", { detail: root }));
     }
-    if (current.current === root) setDraft((value) => value.text === text && value.key === key4 ? { root, text: "", key: "", open: false } : value);
+    if (current.current === root) setDraft((value) => value.text === text && value.key === key3 ? { root, text: "", key: "", open: false } : value);
   }
   const input = draft.root === root ? draft.text : "";
   return { input, draftKey: draft.root === root ? draft.key : "", setInput, clearSent, draftOpen: Boolean(input && draft.open), showDraft: () => setDraft((value) => ({ ...value, open: true })), hideDraft: () => setDraft((value) => ({ ...value, open: false })) };
@@ -3297,7 +3353,7 @@ function TemporaryFixes({ api, status, blocked, onSaved }) {
   }, [api, status.revision]);
   function begin(action, item) {
     setError("");
-    setForm({ ...Object.fromEntries(fields.map(([key4]) => [key4, item?.[key4] ?? ""])), action, id: item?.id, expectedVersion: item?.version, paths: item?.paths.join("\n") ?? "", taskId: tasks.find((t4) => t4.id === item?.taskId)?.id ?? tasks[0]?.id ?? "", verification: "" });
+    setForm({ ...Object.fromEntries(fields.map(([key3]) => [key3, item?.[key3] ?? ""])), action, id: item?.id, expectedVersion: item?.version, paths: item?.paths.join("\n") ?? "", taskId: tasks.find((t4) => t4.id === item?.taskId)?.id ?? tasks[0]?.id ?? "", verification: "" });
   }
   async function save(e46) {
     e46.preventDefault();
@@ -3346,10 +3402,10 @@ function TemporaryFixes({ api, status, blocked, onSaved }) {
         ] })
       ] }),
       ["add", "edit"].includes(form.action) ? /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)(import_jsx_runtime13.Fragment, { children: [
-        fields.map(([key4, label]) => /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("label", { children: [
+        fields.map(([key3, label]) => /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("label", { children: [
           label,
-          /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("textarea", { "aria-label": label, required: true, maxLength: key4 === "title" ? 160 : 2e3, rows: key4 === "title" ? 1 : 2, value: form[key4], onChange: (e46) => setForm({ ...form, [key4]: e46.target.value }) })
-        ] }, key4)),
+          /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("textarea", { "aria-label": label, required: true, maxLength: key3 === "title" ? 160 : 2e3, rows: key3 === "title" ? 1 : 2, value: form[key3], onChange: (e46) => setForm({ ...form, [key3]: e46.target.value }) })
+        ] }, key3)),
         /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("label", { children: [
           "\u5173\u8054\u5B9E\u73B0\u6587\u4EF6",
           /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("textarea", { "aria-label": "\u5173\u8054\u5B9E\u73B0\u6587\u4EF6", required: true, rows: 2, value: form.paths, onChange: (e46) => setForm({ ...form, paths: e46.target.value }), placeholder: "\u6BCF\u884C\u4E00\u4E2A\u9879\u76EE\u5185\u8DEF\u5F84\uFF0C\u4F8B\u5982 main.gd" })
@@ -3369,10 +3425,10 @@ function TemporaryFixes({ api, status, blocked, onSaved }) {
         /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("span", { className: item.effectiveStatus === "resolved" ? "gw-muted" : "gw-accent", children: names[item.effectiveStatus] })
       ] }),
       /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)("dl", { children: [
-        fields.slice(1).map(([key4, label]) => /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)(import_react18.default.Fragment, { children: [
+        fields.slice(1).map(([key3, label]) => /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)(import_react18.default.Fragment, { children: [
           /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("dt", { children: label }),
-          /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("dd", { children: item[key4] })
-        ] }, key4)),
+          /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("dd", { children: item[key3] })
+        ] }, key3)),
         /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("dt", { children: "\u5173\u8054\u5B9E\u73B0" }),
         /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("dd", { children: item.paths.map((p4) => /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("div", { children: /* @__PURE__ */ (0, import_jsx_runtime13.jsx)("code", { children: p4 }) }, p4)) }),
         item.resolution && /* @__PURE__ */ (0, import_jsx_runtime13.jsxs)(import_jsx_runtime13.Fragment, { children: [
@@ -3441,16 +3497,16 @@ function FileRecovery({ api, Modal: Modal2, blocked, onClose, onResolved }) {
         ] }, op.id)) })
       ] }),
       item?.conflict && /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("p", { className: "gw-settings-error", children: "\u53D1\u73B0\u540E\u7EED\u4FEE\u6539\uFF0C\u5DF2\u4FDD\u7559\u53CC\u65B9\u7248\u672C\u3002\u8FD9\u91CC\u4EC5\u5141\u8BB8\u4FDD\u7559\u5F53\u524D\u6587\u4EF6\uFF1B\u9700\u8981\u5408\u5E76\u65F6\uFF0C\u8BF7\u5148\u6BD4\u8F83\u5185\u5BB9\u518D\u7F16\u8F91\u3002" }),
-      item?.detail && /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("div", { className: "gw-version-columns", children: [["current", "\u5F53\u524D\u6587\u4EF6"], ["before", "\u4FEE\u6539\u524D"], ["after", "\u539F\u8BA1\u5212\u5199\u5165"], ["displaced", "\u4E2D\u65AD\u65F6\u4FDD\u7559\u7684\u539F\u4EF6"]].map(([key4, title]) => /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("article", { children: [
+      item?.detail && /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("div", { className: "gw-version-columns", children: [["current", "\u5F53\u524D\u6587\u4EF6"], ["before", "\u4FEE\u6539\u524D"], ["after", "\u539F\u8BA1\u5212\u5199\u5165"], ["displaced", "\u4E2D\u65AD\u65F6\u4FDD\u7559\u7684\u539F\u4EF6"]].map(([key3, title]) => /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("article", { children: [
         /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("h4", { children: [
           title,
           " \xB7 ",
-          item.detail[key4].bytes,
+          item.detail[key3].bytes,
           " \u5B57\u8282"
         ] }),
-        /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("pre", { children: item.detail[key4].encoding === "binary" ? "\u4E8C\u8FDB\u5236\u6587\u4EF6\uFF0C\u6309\u5B8C\u6574\u5185\u5BB9\u6821\u9A8C\uFF1B\u8BF7\u7528\u5BF9\u5E94\u7F16\u8F91\u5668\u68C0\u67E5\u3002" : item.detail[key4].content ?? "\u6587\u4EF6\u4E0D\u5B58\u5728" }),
-        item.detail[key4].truncated && /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("p", { children: "\u4EC5\u663E\u793A\u524D 32000 \u5B57\u7B26\uFF0C\u4E0D\u80FD\u636E\u6B64\u91CD\u5199\u6574\u4E2A\u6587\u4EF6\u3002" })
-      ] }, key4)) }),
+        /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("pre", { children: item.detail[key3].encoding === "binary" ? "\u4E8C\u8FDB\u5236\u6587\u4EF6\uFF0C\u6309\u5B8C\u6574\u5185\u5BB9\u6821\u9A8C\uFF1B\u8BF7\u7528\u5BF9\u5E94\u7F16\u8F91\u5668\u68C0\u67E5\u3002" : item.detail[key3].content ?? "\u6587\u4EF6\u4E0D\u5B58\u5728" }),
+        item.detail[key3].truncated && /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("p", { children: "\u4EC5\u663E\u793A\u524D 32000 \u5B57\u7B26\uFF0C\u4E0D\u80FD\u636E\u6B64\u91CD\u5199\u6574\u4E2A\u6587\u4EF6\u3002" })
+      ] }, key3)) }),
       /* @__PURE__ */ (0, import_jsx_runtime14.jsxs)("label", { children: [
         "\u5904\u7406\u65B9\u5F0F",
         /* @__PURE__ */ (0, import_jsx_runtime14.jsx)("select", { "aria-label": "\u6587\u4EF6\u6062\u590D\u65B9\u5F0F", value: choice, disabled: busy2 || Boolean(blocked), onChange: (e46) => {
@@ -4079,13 +4135,13 @@ function diagnosisCopy(issue) {
 // src/ProducerDiagnosis.jsx
 var import_jsx_runtime17 = require("react/jsx-runtime");
 var actionNames = { design: "\u8BA8\u8BBA\u8BBE\u8BA1\u65B9\u6848", production: "\u8BA8\u8BBA\u8BA1\u5212\u8C03\u6574", engineering: "\u8BF7\u6C42\u5C40\u90E8\u4FEE\u590D", verification: "\u8865\u5145\u9A8C\u8BC1\u8BA1\u5212" };
-function ProducerDiagnosis({ report, busy: busy2, sent, canChat, onSuggest, onExplain, onRecheck, onOpenPlan }) {
+function ProducerDiagnosis({ report, busy: busy2, sent, canChat, canSendSuggestion = canChat, onSuggest, onExplain, onRecheck, onOpenPlan }) {
   const grouped = groupDiagnosis(report);
   const planAction = (issue) => onOpenPlan ? diagnosisPlanAction(report, issue) : null;
   const certainty = (issue) => issue.category === "confirmed" ? "\u6709\u68C0\u67E5\u8BC1\u636E" : issue.category === "risk" ? "\u98CE\u9669\u5F85\u6838\u5B9E" : "\u5047\u8BBE\u5F85\u9A8C\u8BC1";
   function actionLabel(issue) {
     if (sent.has(`${report.id}:${issue.id}`)) return "\u5DF2\u53D1\u9001";
-    if (!canChat) return "\u67E5\u770B\u5F85\u53D1\u9001\u5EFA\u8BAE";
+    if (!canSendSuggestion) return "\u67E5\u770B\u5F85\u53D1\u9001\u5EFA\u8BAE";
     if (issue.code === "ENGINE_UNAVAILABLE") return "\u8BA8\u8BBA\u5F15\u64CE\u914D\u7F6E";
     return actionNames[issue.module] ?? "\u8BA8\u8BBA\u8FD9\u6761\u5EFA\u8BAE";
   }
@@ -5017,10 +5073,10 @@ function PlanDocument({ status, confirmation, onDocuments }) {
     ] }),
     plan.gdd && /* @__PURE__ */ (0, import_jsx_runtime24.jsxs)("details", { className: "gw-plan-detail", children: [
       /* @__PURE__ */ (0, import_jsx_runtime24.jsx)("summary", { children: "\u5B8C\u6574\u8BBE\u8BA1\u8BE6\u60C5" }),
-      Object.entries({ systems: "\u7CFB\u7EDF\u4E0E\u6A21\u5757", progression: "\u6210\u957F\u4E0E\u6570\u503C", content: "\u5185\u5BB9\u8303\u56F4", presentation: "\u753B\u9762\u4E0E\u58F0\u97F3", technical: "\u5DE5\u7A0B\u7EA6\u675F", qa: "\u6D4B\u8BD5\u4E0E\u56DE\u5F52" }).filter(([key4]) => plan.gdd[key4]).map(([key4, label]) => /* @__PURE__ */ (0, import_jsx_runtime24.jsxs)("section", { children: [
+      Object.entries({ systems: "\u7CFB\u7EDF\u4E0E\u6A21\u5757", progression: "\u6210\u957F\u4E0E\u6570\u503C", content: "\u5185\u5BB9\u8303\u56F4", presentation: "\u753B\u9762\u4E0E\u58F0\u97F3", technical: "\u5DE5\u7A0B\u7EA6\u675F", qa: "\u6D4B\u8BD5\u4E0E\u56DE\u5F52" }).filter(([key3]) => plan.gdd[key3]).map(([key3, label]) => /* @__PURE__ */ (0, import_jsx_runtime24.jsxs)("section", { children: [
         /* @__PURE__ */ (0, import_jsx_runtime24.jsx)("h3", { children: label }),
-        /* @__PURE__ */ (0, import_jsx_runtime24.jsx)("p", { style: { whiteSpace: "pre-wrap" }, children: plan.gdd[key4] })
-      ] }, key4))
+        /* @__PURE__ */ (0, import_jsx_runtime24.jsx)("p", { style: { whiteSpace: "pre-wrap" }, children: plan.gdd[key3] })
+      ] }, key3))
     ] }),
     /* @__PURE__ */ (0, import_jsx_runtime24.jsxs)("button", { className: "gw-secondary", onClick: onDocuments, children: [
       /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(s5, { size: 20 }),
@@ -5064,14 +5120,14 @@ function LaunchCard({ icon: Icon, tag, title, detail, action, onClick, primary =
 // src/ResizablePanels.jsx
 var import_react33 = __toESM(require("react"), 1);
 var import_jsx_runtime25 = require("react/jsx-runtime");
-var key2 = "gamedev-panel-widths-v1";
+var key = "gamedev-panel-widths-v1";
 var defaults = { left: 240, right: 340 };
 var clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 function useResizablePanels() {
   const shellRef = (0, import_react33.useRef)(null), drag = (0, import_react33.useRef)(null);
   const [widths, setWidths] = (0, import_react33.useState)(() => {
     try {
-      const saved = JSON.parse(localStorage.getItem(key2));
+      const saved = JSON.parse(localStorage.getItem(key));
       return { left: Number.isFinite(saved?.left) ? clamp(saved.left, 200, 360) : defaults.left, right: Number.isFinite(saved?.right) ? clamp(saved.right, 260, 440) : defaults.right };
     } catch {
       return defaults;
@@ -5080,7 +5136,7 @@ function useResizablePanels() {
   const [dragging, setDragging] = (0, import_react33.useState)(false);
   (0, import_react33.useEffect)(() => {
     try {
-      localStorage.setItem(key2, JSON.stringify(widths));
+      localStorage.setItem(key, JSON.stringify(widths));
     } catch {
     }
   }, [widths]);
@@ -5165,6 +5221,7 @@ var statusNames2 = { pending: "\u5F85\u5F00\u59CB", running: "\u6B63\u5728\u5236
 var knowledgeStages = { direction: "intake", prototype: "implement", design: "plan", production: "implement", polish: "implement", qa: "verify", release: "finish", delivered: "finish" };
 var listFields = /* @__PURE__ */ new Set(["inScope", "outOfScope", "acceptance", "assumptions", "blockingQuestions"]);
 var formFields = { title: "\u9879\u76EE\u540D\u79F0", concept: "\u4E00\u53E5\u8BDD\u6982\u5FF5", experience: "\u6838\u5FC3\u4F53\u9A8C", coreLoop: "\u6838\u5FC3\u5FAA\u73AF", platform: "\u5E73\u53F0\u4E0E\u64CD\u4F5C", inScope: "\u5F53\u524D\u8981\u505A\uFF08\u6BCF\u884C\u4E00\u9879\uFF09", outOfScope: "\u5F53\u524D\u4E0D\u505A\uFF08\u6BCF\u884C\u4E00\u9879\uFF09", acceptance: "\u600E\u6837\u7B97\u5B8C\u6210\uFF08\u6BCF\u884C\u4E00\u9879\uFF09", visualDirection: "\u89C6\u89C9\u65B9\u5411", savePolicy: "\u5B58\u6863\u65B9\u5F0F", assumptions: "\u5F85\u9A8C\u8BC1\u7684\u5047\u8BBE\uFF08\u6BCF\u884C\u4E00\u9879\uFF09", blockingQuestions: "\u8FD8\u9700\u51B3\u5B9A\u7684\u95EE\u9898\uFF08\u6BCF\u884C\u4E00\u9879\uFF09" };
+var diagnosisDraftKey = /^([\da-f-]{36}):([\da-f-]{36})$/i;
 function Modal({ title, children, onClose, wide = false, variant = "" }) {
   const titleId = (0, import_react34.useId)();
   const ref = (0, import_react34.useRef)(null);
@@ -5341,29 +5398,29 @@ function PlanEditor({ plan, guided, busy: busy2, onSave, onClose }) {
   const [milestones, setMilestones] = (0, import_react34.useState)(() => structuredClone(plan?.milestones ?? []));
   const [draft, setDraft] = (0, import_react34.useState)(() => Object.fromEntries(Object.keys(formFields).map((k) => [k, listFields.has(k) ? (plan?.[k] ?? []).join("\n") : plan?.[k] ?? ""])));
   const [brief2, setBrief] = (0, import_react34.useState)(() => ({ progression: plan?.gdd?.progression ?? "", content: plan?.gdd?.content ?? "" }));
-  function field([key4, label]) {
-    return /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("label", { className: listFields.has(key4) ? "wide-field" : "", children: [
+  function field([key3, label]) {
+    return /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("label", { className: listFields.has(key3) ? "wide-field" : "", children: [
       label,
-      /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("textarea", { "aria-label": label, rows: listFields.has(key4) ? 3 : 2, value: draft[key4], onChange: (e46) => setDraft({ ...draft, [key4]: e46.target.value }), maxLength: 1e4 })
-    ] }, key4);
+      /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("textarea", { "aria-label": label, rows: listFields.has(key3) ? 3 : 2, value: draft[key3], onChange: (e46) => setDraft({ ...draft, [key3]: e46.target.value }), maxLength: 1e4 })
+    ] }, key3);
   }
   return /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)(Modal, { title: "\u8C03\u6574\u5F00\u53D1\u65B9\u6848", onClose, wide: true, children: [
     /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("p", { className: "gw-muted", children: "\u5148\u628A\u4F53\u9A8C\u3001\u8303\u56F4\u548C\u9A8C\u6536\u8BB2\u6E05\u695A\u3002\u4FDD\u5B58\u540E\u9700\u8981\u786E\u8BA4\u65B0\u7248\u672C\uFF0C\u5DF2\u6709\u5F00\u53D1\u8BB0\u5F55\u4F1A\u4FDD\u7559\u3002" }),
     /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("form", { onSubmit: (e46) => {
       e46.preventDefault();
-      const fields2 = Object.fromEntries(Object.entries(draft).map(([key4, value]) => [key4, listFields.has(key4) ? value.split("\n").map((line) => line.trim()).filter(Boolean) : value]));
+      const fields2 = Object.fromEntries(Object.entries(draft).map(([key3, value]) => [key3, listFields.has(key3) ? value.split("\n").map((line) => line.trim()).filter(Boolean) : value]));
       onSave({ ...plan, ...fields2, milestones, ...guided && { gdd: { ...plan?.gdd, ...brief2 } } });
     }, children: [
       /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("div", { className: "gw-form-grid", children: [
-        Object.entries(formFields).filter(([key4]) => !guided || !["assumptions", "blockingQuestions", "savePolicy"].includes(key4)).map(field),
-        guided && Object.entries({ progression: "\u9996\u8F6E\u76EE\u6807\u4E0E\u7ED3\u679C", content: "\u9996\u7248\u53EF\u73A9\u5185\u5BB9" }).map(([key4, label]) => /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("label", { children: [
+        Object.entries(formFields).filter(([key3]) => !guided || !["assumptions", "blockingQuestions", "savePolicy"].includes(key3)).map(field),
+        guided && Object.entries({ progression: "\u9996\u8F6E\u76EE\u6807\u4E0E\u7ED3\u679C", content: "\u9996\u7248\u53EF\u73A9\u5185\u5BB9" }).map(([key3, label]) => /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("label", { children: [
           label,
-          /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("textarea", { "aria-label": label, rows: 2, maxLength: 8e3, value: brief2[key4], onChange: (e46) => setBrief({ ...brief2, [key4]: e46.target.value }) })
-        ] }, key4))
+          /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("textarea", { "aria-label": label, rows: 2, maxLength: 8e3, value: brief2[key3], onChange: (e46) => setBrief({ ...brief2, [key3]: e46.target.value }) })
+        ] }, key3))
       ] }),
       guided && /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("details", { className: "gw-plan-detail", children: [
         /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("summary", { children: "\u5047\u8BBE\u3001\u5B58\u6863\u4E0E\u5F85\u51B3\u5B9A\u4E8B\u9879" }),
-        /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("div", { className: "gw-form-grid", children: ["assumptions", "blockingQuestions", "savePolicy"].map((key4) => field([key4, formFields[key4]])) })
+        /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("div", { className: "gw-form-grid", children: ["assumptions", "blockingQuestions", "savePolicy"].map((key3) => field([key3, formFields[key3]])) })
       ] }),
       /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(MilestoneEditor, { value: milestones, onChange: setMilestones, acceptance: draft.acceptance.split("\n").map((x) => x.trim()).filter(Boolean), busy: busy2 }),
       /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("footer", { children: [
@@ -5843,6 +5900,7 @@ function App({ api = defaultApi, conversation = null, agentState = null, host = 
   const planDraft = planStartHash(draftKey) !== null;
   const knowledgeDraft = Boolean(draftKey?.startsWith("knowledge-use:"));
   const clarificationDraft = isPlanClarification(draftKey);
+  const diagnosisDraft = diagnosisDraftKey.test(draftKey);
   const [diagnosisMode, setDiagnosisMode] = (0, import_react34.useState)("quick");
   const [diagnosisOutcome2, setDiagnosisOutcome] = (0, import_react34.useState)(null);
   const [overviewView, setOverviewView] = (0, import_react34.useState)("tasks");
@@ -5942,10 +6000,11 @@ function App({ api = defaultApi, conversation = null, agentState = null, host = 
     if (!api.diagnosisState) setNotice("\u5DF2\u53D1\u9001\u5230\u672C\u9879\u76EE\u7684\u8BCA\u65AD\u5BF9\u8BDD\u3002");
   }
   async function runDiagnosis(review = true) {
+    const project = projectPathKey(status.projectRoot);
     await perform("\u6B63\u5728\u6838\u5BF9\u65B9\u6848\u4E0E\u5DE5\u7A0B", async () => {
       const result = await api.call("diagnose", { runImport: diagnosisMode === "engine" });
       const current = await refresh();
-      if (review && current.projectId === status.projectId && current.latestDiagnosis?.id === result.id) await requestReview(current.latestDiagnosis);
+      if (review && projectPathKey(current.projectRoot) === project && current.latestDiagnosis?.id === result.id) await requestReview(current.latestDiagnosis);
     });
   }
   async function recheckEngine() {
@@ -5958,12 +6017,12 @@ function App({ api = defaultApi, conversation = null, agentState = null, host = 
       }
     });
   }
-  async function deliver(text, key4 = crypto.randomUUID()) {
-    setInput(text, key4);
-    if (inDiagnosisChat && (planStartHash(key4) !== null || isPlanClarification(key4) || key4.startsWith("lifecycle-") || key4.startsWith("knowledge-use:"))) throw new Error("\u8BF7\u5728\u5DE6\u680F\u9009\u62E9\u672C\u9879\u76EE\u7684\u5F00\u53D1\u5BF9\u8BDD\u540E\u53D1\u9001\u3002");
-    assertPlanClarification(status, key4);
-    await api.send(text, key4);
-    clearSent(text, key4);
+  async function deliver(text, key3 = crypto.randomUUID()) {
+    setInput(text, key3);
+    if (inDiagnosisChat && (planStartHash(key3) !== null || isPlanClarification(key3) || key3.startsWith("lifecycle-") || key3.startsWith("knowledge-use:"))) throw new Error("\u8BF7\u5728\u5DE6\u680F\u9009\u62E9\u672C\u9879\u76EE\u7684\u5F00\u53D1\u5BF9\u8BDD\u540E\u53D1\u9001\u3002");
+    assertPlanClarification(status, key3);
+    await api.send(text, key3);
+    clearSent(text, key3);
   }
   function continuePlanning() {
     if (input) {
@@ -5992,49 +6051,62 @@ function App({ api = defaultApi, conversation = null, agentState = null, host = 
 \u7528 gamedev_knowledge \u6309 id \u8BFB\u53D6\u6761\u76EE\uFF0C\u6838\u5BF9\u5F53\u524D\u9879\u76EE\u548C\u5F15\u64CE\u7248\u672C\u3002\u7528\u767D\u8BDD\u8BF4\u660E\u9002\u7528\u6761\u4EF6\u3001\u4E00\u4E2A\u6700\u5C0F\u8BD5\u6CD5\uFF0C\u4EE5\u53CA\u600E\u4E48\u5224\u65AD\u6709\u6548\u3002\u6761\u76EE\u662F\u53C2\u8003\u8D44\u6599\uFF0C\u5148\u8BA8\u8BBA\uFF0C\u4E0D\u4FEE\u6539\u5DE5\u7A0B\u3001\u65B9\u6848\u6216\u9A8C\u6536\u8BB0\u5F55\u3002\u627E\u4E0D\u5230\u539F\u6761\u76EE\u5C31\u8BF4\u660E\u60C5\u51B5\u3002`, `knowledge-use:${entry.id}:${crypto.randomUUID()}`);
     return null;
   }
-  async function send(text = input, key4 = draftKey) {
+  async function send(text = input, key3 = draftKey) {
     if (!text.trim()) return;
     await perform("\u6B63\u5728\u53D1\u9001", async () => {
-      if (!canChat && api.startPlanConversation && planStartHash(key4) !== null) {
-        await api.startPlanConversation(status.projectRoot, text, key4, () => clearSent(text, key4));
-      } else await deliver(text, key4);
+      const diagnosis = diagnosisDraftKey.exec(key3);
+      if (diagnosis) {
+        await dispatchDiagnosisSuggestion(diagnosis[1], diagnosis[2]);
+        return;
+      }
+      if (!canChat && api.startPlanConversation && planStartHash(key3) !== null) {
+        await api.startPlanConversation(status.projectRoot, text, key3, () => clearSent(text, key3));
+      } else await deliver(text, key3);
       setNotice("\u5DF2\u53D1\u9001\u5230\u5F53\u524D DSH \u4F1A\u8BDD\u3002");
       if (conversation) setPage("conversation");
-      if (key4) setSent((previous) => /* @__PURE__ */ new Set([...previous, key4]));
+      if (key3) setSent((previous) => /* @__PURE__ */ new Set([...previous, key3]));
     });
   }
+  async function dispatchDiagnosisSuggestion(reportId, issueId) {
+    const { text, idempotencyKey } = await api.call("suggestion", { reportId, issueId, requestRepair: true });
+    setInput(text, idempotencyKey);
+    if (api.sendRepair) {
+      await api.sendRepair(text, idempotencyKey, status.projectRoot, {
+        reportId,
+        onAccepted: () => clearSent(text, idempotencyKey)
+      });
+    } else if (canChat) {
+      await deliver(text, idempotencyKey);
+      if (conversation) setPage("conversation");
+    } else {
+      setNotice("\u5EFA\u8BAE\u5C1A\u672A\u53D1\u9001\uFF0C\u8BF7\u8FDE\u63A5\u672C\u9879\u76EE\u5BF9\u8BDD\u3002");
+      return;
+    }
+    setSent((previous) => /* @__PURE__ */ new Set([...previous, idempotencyKey]));
+    setNotice("\u5EFA\u8BAE\u5DF2\u53D1\u9001\u5230\u5F00\u53D1\u5BF9\u8BDD\u3002");
+  }
   async function applySuggestion(issueId) {
-    await perform("\u6B63\u5728\u6838\u5BF9\u5EFA\u8BAE", async () => {
-      const suggestion = await api.call("suggestion", { reportId: report.id, issueId, requestRepair: true });
-      setInput(suggestion.text, suggestion.idempotencyKey);
-      if (canChat) {
-        if (api.sendRepair) {
-          await api.sendRepair(suggestion.text, suggestion.idempotencyKey, status.projectRoot);
-          clearSent(suggestion.text, suggestion.idempotencyKey);
-        } else await deliver(suggestion.text, suggestion.idempotencyKey);
-        setSent((previous) => /* @__PURE__ */ new Set([...previous, suggestion.idempotencyKey]));
-        if (conversation) setPage("conversation");
-        setNotice("\u4FEE\u590D\u5EFA\u8BAE\u5DF2\u53D1\u9001\u5230\u5F00\u53D1\u5BF9\u8BDD\u3002");
-      } else {
-        setNotice("\u5EFA\u8BAE\u5C1A\u672A\u53D1\u9001\uFF0C\u8BF7\u8FDE\u63A5\u672C\u9879\u76EE\u5BF9\u8BDD\u3002");
-      }
-    });
+    if (input && draftKey !== `${report.id}:${issueId}`) {
+      showDraft();
+      return;
+    }
+    await perform("\u6B63\u5728\u6838\u5BF9\u5EFA\u8BAE", () => dispatchDiagnosisSuggestion(report.id, issueId));
   }
   async function explainSuggestion(issueId) {
     await perform("\u51C6\u5907\u7B80\u660E\u89E3\u8BFB", async () => {
       await api.call("suggestion", { reportId: report.id, issueId });
-      const key4 = `explain:${report.id}:${issueId}`;
+      const key3 = `explain:${report.id}:${issueId}`;
       const message = `\u8BF7\u53EA\u8BFB\u89E3\u91CA\u5F53\u524D\u8BCA\u65AD\u62A5\u544A ${report.id} \u4E2D\u7684\u95EE\u9898 ${issueId}\u3002\u5148\u8C03\u7528 gamedev_status \u6838\u5BF9\u62A5\u544A\u53CA\u95EE\u9898\u4ECD\u5BF9\u5E94\u5F53\u524D\u9879\u76EE\uFF1B\u82E5\u5DF2\u53D8\u5316\u5219\u505C\u6B62\u5E76\u8BF4\u660E\u9700\u8981\u91CD\u65B0\u68C0\u67E5\u3002\u8BFB\u53D6\u8BE5\u95EE\u9898\u7684\u539F\u59CB\u89E3\u91CA\u3001\u5EFA\u8BAE\u53CA\u5F15\u7528\u4F9D\u636E\uFF0C\u7528\u767D\u8BDD\u8BF4\u660E\u95EE\u9898\u3001\u5F71\u54CD\u548C\u4E00\u4E2A\u4E0B\u4E00\u6B65\uFF0C\u4FDD\u7559\u539F\u6709\u6761\u4EF6\u3001\u5426\u5B9A\u548C\u4E0D\u786E\u5B9A\u6027\uFF1B\u4E0D\u731C\u53C2\u6570\u542B\u4E49\uFF0C\u5FC5\u8981\u65F6\u67E5\u9879\u76EE\u6587\u4EF6\u3002\u4E0D\u8981\u6267\u884C\u4FEE\u590D\u3001\u6539\u4EE3\u7801\u6216\u66F4\u6539\u65B9\u6848\u4E0E\u4EBA\u5DE5\u9A8C\u6536\u72B6\u6001\u3002\u8BF7\u8C03\u7528 gamedev_diagnosis_explain\uFF0C\u4EC5\u4F20reportId/issueId\u8BFB\u53D6\u539F\u95EE\u9898\u548CsourceHash\u3002\u82E5\u80FD\u51C6\u786E\u89E3\u91CA\uFF0C\u518D\u7528\u540C\u4E00\u5DE5\u5177\u63D0\u4EA4expectedHash\u4E0Epresentation\uFF08summary\u6700\u591A60\u5B57\u3001impact\u6700\u591A100\u5B57\u3001nextStep\u6700\u591A80\u5B57\uFF0C\u4E0D\u542B\u4EE3\u7801\u8DEF\u5F84\u6216\u53C2\u6570\u540D\uFF09\u3002\u8FD9\u4E2A\u5DE5\u5177\u53EA\u66F4\u65B0\u8BE5\u6761\u5C55\u793A\u6587\u5B57\uFF0C\u4E0D\u5220\u6389\u5176\u4ED6\u95EE\u9898\u3002\u4E0D\u8981\u8C03\u7528gamedev_diagnosis_review\u91CD\u5199\u6574\u4EFD\u62A5\u544A\u3002\u8BC1\u636E\u4E0D\u8DB3\u5C31\u8BF4\u660E\u4E0D\u8DB3\uFF0C\u4E0D\u7F16\u9020\u89E3\u91CA\u3002`;
       if (api.explainDiagnosis) {
-        await api.explainDiagnosis(status.projectRoot, report.id, message, key4);
-        setSent((previous) => /* @__PURE__ */ new Set([...previous, key4]));
+        await api.explainDiagnosis(status.projectRoot, report.id, message, key3);
+        setSent((previous) => /* @__PURE__ */ new Set([...previous, key3]));
         setNotice("\u5DF2\u4EA4\u7ED9\u8BCA\u65AD\u5BF9\u8BDD\u89E3\u8BFB\uFF0C\u5F00\u53D1\u4E0D\u53D7\u5F71\u54CD\u3002");
         return;
       }
-      setInput(message, key4);
+      setInput(message, key3);
       if (canChat) {
-        await deliver(message, key4);
-        setSent((previous) => /* @__PURE__ */ new Set([...previous, key4]));
+        await deliver(message, key3);
+        setSent((previous) => /* @__PURE__ */ new Set([...previous, key3]));
         if (conversation) setPage("conversation");
         setNotice("\u89E3\u8BFB\u8BF7\u6C42\u5DF2\u53D1\u9001\uFF1B\u8FD9\u6B21\u4E0D\u4F1A\u8981\u6C42\u4FEE\u6539\u6E38\u620F\u3002");
       } else setNotice("\u89E3\u8BFB\u8BF7\u6C42\u5DF2\u4FDD\u7559\uFF0C\u8FDE\u63A5\u672C\u9879\u76EE\u5BF9\u8BDD\u540E\u53EF\u53D1\u9001\u3002");
@@ -6054,15 +6126,13 @@ function App({ api = defaultApi, conversation = null, agentState = null, host = 
     await perform("\u51C6\u5907\u672C\u8F6E\u4FEE\u7F2E", async () => {
       const current = await refresh();
       if (!["prototype", "production", "polish"].includes(current.lifecycle?.stage)) throw new Error("\u9636\u6BB5\u5DF2\u53D8\u5316\uFF0C\u8BF7\u6838\u5BF9\u5F53\u524D\u4E0B\u4E00\u6B65\u3002");
-      const key4 = `lifecycle-repair:${current.projectId}:${current.lifecycle.version}:${current.planHash}`;
+      const key3 = `lifecycle-repair:${current.projectId}:${current.lifecycle.version}:${current.planHash}`;
       const text = `\u8BF7\u5904\u7406\u672C\u9879\u76EE\u7B2C ${current.lifecycle.iteration} \u8F6E\u4FEE\u7F2E\u3002\u5148\u8C03\u7528 gamedev_status\uFF0C\u6838\u5BF9 projectId=${current.projectId}\u3001planHash=${current.planHash}\u3001lifecycle.version=${current.lifecycle.version}\uFF0C\u6709\u53D8\u5316\u5C31\u505C\u6B62\u3002\u7528\u6237\u53CD\u9988\uFF1A${reason}\u3002\u8BFB\u53D6\u6700\u65B0QA\u8BB0\u5F55\u548C\u8BCA\u65AD\uFF0C\u533A\u5206\u5F53\u524D\u5931\u8D25\u4E0E\u5386\u53F2\u8BB0\u5F55\uFF1B\u4F9D\u636E\u5B9E\u9645\u95EE\u9898\u5B89\u6392\u6700\u5C0F\u4FEE\u590D\u4EFB\u52A1\uFF0C\u4E0D\u91CD\u5199\u6574\u4E2A\u7CFB\u7EDF\u3001\u4E0D\u6269\u5927\u8303\u56F4\u3001\u4E0D\u65B0\u5EFA\u65E0\u4F9D\u8D56\u4EFB\u52A1\u7ED5\u8FC7\u963B\u65AD\u3002\u82E5\u9700\u8981\u65B0\u7684\u8BBE\u8BA1\u51B3\u5B9A\uFF0C\u5148\u6574\u7406\u65B9\u6848\u7B49\u7528\u6237\u786E\u8BA4\u3002\u5B8C\u6210\u540E\u8FD0\u884C\u53D7\u5F71\u54CD\u90E8\u5206\u53CA\u5DF2\u6709\u529F\u80FD\u68C0\u67E5\uFF0C\u4FDD\u7559\u5931\u8D25\u4F9D\u636E\uFF0C\u4E0D\u4EE3\u7528\u6237\u8BB0\u5F55QA\u901A\u8FC7\u6216\u6700\u7EC8\u9A8C\u6536\u3002\u6700\u540E\u53EA\u8BF4\u660E\u6539\u52A8\u3001\u9A8C\u8BC1\u7ED3\u679C\u548C\u4E00\u4E2A\u4E0B\u4E00\u6B65\u3002`;
-      setInput(text, key4);
+      setInput(text, key3);
       if (inDiagnosisChat && api.sendRepair) {
-        await api.sendRepair(text, key4, current.projectRoot);
-        clearSent(text, key4);
-        setPage("conversation");
+        await api.sendRepair(text, key3, current.projectRoot, { onAccepted: () => clearSent(text, key3) });
       } else if (canChat) {
-        await deliver(text, key4);
+        await deliver(text, key3);
         setPage("conversation");
       } else {
         setPage("conversation");
@@ -6469,6 +6539,7 @@ function App({ api = defaultApi, conversation = null, agentState = null, host = 
                 busy: Boolean(busy2) || checking,
                 sent,
                 canChat,
+                canSendSuggestion: canChat || Boolean(api.sendRepair),
                 onSuggest: applySuggestion,
                 onExplain: explainSuggestion,
                 onRecheck: () => runDiagnosis(false),
@@ -6525,19 +6596,19 @@ function App({ api = defaultApi, conversation = null, agentState = null, host = 
     ] }),
     /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("aside", { className: "gw-inspector", children: /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(DevelopmentChecklist, { status, action: checklistAction(), muted: notices.muted, onToggleSound: notices.toggleSound }) }),
     draftOpen && /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)(Modal, { title: planDraft ? "\u5F85\u53D1\u9001\u5236\u4F5C\u8BF7\u6C42" : clarificationDraft ? "\u5F85\u53D1\u9001\u8BBE\u8BA1\u95EE\u9898" : knowledgeDraft ? "\u5728\u5F00\u53D1\u5BF9\u8BDD\u4E2D\u8BA8\u8BBA" : "\u5F85\u53D1\u9001\u5EFA\u8BAE", onClose: hideDraft, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("p", { children: planDraft ? "\u7EE7\u7EED\u5DF2\u786E\u8BA4\u8BA1\u5212\u4E2D\u7684\u4E00\u5C0F\u6B65\uFF1A\u6838\u5BF9\u5DF2\u6709\u6539\u52A8\uFF0C\u518D\u5236\u4F5C\u5E76\u68C0\u67E5\u7ED3\u679C\u3002\u9700\u8981\u4F60\u51B3\u5B9A\u7684\u95EE\u9898\u4F1A\u5148\u8BE2\u95EE\u3002" : clarificationDraft ? "\u8BF7 AI \u63A5\u7740\u5DF2\u8C08\u597D\u7684\u5185\u5BB9\uFF0C\u53EA\u95EE\u5F53\u524D\u8FD8\u9700\u8981\u4F60\u51B3\u5B9A\u7684\u4E8B\u3002" : knowledgeDraft ? "\u53D1\u9001\u540E\uFF0CAI \u4F1A\u7ED3\u5408\u5F53\u524D\u6E38\u620F\u8BC4\u4F30\u8FD9\u6761\u505A\u6CD5\u3002\u8349\u7A3F\u4FDD\u7559\u5728\u672C\u9879\u76EE\u3002" : "\u8FD9\u6BB5\u5EFA\u8BAE\u5C1A\u672A\u53D1\u9001\u3002\u5173\u95ED\u540E\u4FDD\u7559\u5728\u672C\u673A\u672C\u9879\u76EE\uFF0C\u53D1\u9001\u524D\u8BF7\u6838\u5BF9\u5185\u5BB9\u662F\u5426\u4ECD\u9002\u7528\u3002" }),
-      planDraft || clarificationDraft ? /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("details", { children: [
+      /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("p", { children: planDraft ? "\u7EE7\u7EED\u5DF2\u786E\u8BA4\u8BA1\u5212\u4E2D\u7684\u4E00\u5C0F\u6B65\uFF1A\u6838\u5BF9\u5DF2\u6709\u6539\u52A8\uFF0C\u518D\u5236\u4F5C\u5E76\u68C0\u67E5\u7ED3\u679C\u3002\u9700\u8981\u4F60\u51B3\u5B9A\u7684\u95EE\u9898\u4F1A\u5148\u8BE2\u95EE\u3002" : clarificationDraft ? "\u8BF7 AI \u63A5\u7740\u5DF2\u8C08\u597D\u7684\u5185\u5BB9\uFF0C\u53EA\u95EE\u5F53\u524D\u8FD8\u9700\u8981\u4F60\u51B3\u5B9A\u7684\u4E8B\u3002" : knowledgeDraft ? "\u53D1\u9001\u540E\uFF0CAI \u4F1A\u7ED3\u5408\u5F53\u524D\u6E38\u620F\u8BC4\u4F30\u8FD9\u6761\u505A\u6CD5\u3002\u8349\u7A3F\u4FDD\u7559\u5728\u672C\u9879\u76EE\u3002" : diagnosisDraft ? "\u53D1\u9001\u65F6\u4F1A\u91CD\u65B0\u6838\u5BF9\u8BCA\u65AD\u3002\u5EFA\u8BAE\u4F1A\u8FDB\u5165\u672C\u9879\u76EE\u7684\u5F00\u53D1\u5BF9\u8BDD\u3002" : "\u8FD9\u6BB5\u5EFA\u8BAE\u5C1A\u672A\u53D1\u9001\u3002\u5173\u95ED\u540E\u4FDD\u7559\u5728\u672C\u673A\u672C\u9879\u76EE\uFF0C\u53D1\u9001\u524D\u8BF7\u6838\u5BF9\u5185\u5BB9\u662F\u5426\u4ECD\u9002\u7528\u3002" }),
+      planDraft || clarificationDraft || diagnosisDraft ? /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("details", { children: [
         /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("summary", { children: planDraft ? "\u67E5\u770B\u53D1\u9001\u5185\u5BB9\u4E0E\u7248\u672C\u4F9D\u636E" : "\u67E5\u770B\u53D1\u9001\u5185\u5BB9" }),
         /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("textarea", { "aria-label": "\u5F85\u53D1\u9001\u5EFA\u8BAE\u6587\u672C", readOnly: true, value: input, rows: 7 })
       ] }) : /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("textarea", { "aria-label": "\u5F85\u53D1\u9001\u5EFA\u8BAE\u6587\u672C", maxLength: 32e3, readOnly: knowledgeDraft, value: input, onChange: (e46) => setInput(e46.target.value), rows: 7 }),
-      (knowledgeDraft || clarificationDraft) && error && /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("p", { role: "alert", className: "gw-settings-error", children: error }),
+      (knowledgeDraft || clarificationDraft || diagnosisDraft) && error && /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("p", { role: "alert", className: "gw-settings-error", children: error }),
       (knowledgeDraft || clarificationDraft) && (inDiagnosisChat || !canChat) && /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("p", { className: "gw-small gw-muted", children: "\u8BF7\u6253\u5F00\u672C\u9879\u76EE\u7684\u5F00\u53D1\u5BF9\u8BDD\uFF0C\u518D\u4ECE\u5F85\u53D1\u9001\u5EFA\u8BAE\u7EE7\u7EED\u3002" }),
       /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("footer", { children: [
         /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("button", { className: "gw-secondary", disabled: Boolean(busy2), onClick: () => setInput(""), children: "\u4E22\u5F03\u5EFA\u8BAE" }),
         (knowledgeDraft || clarificationDraft) && !canChat && api.bindProject ? /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("button", { className: "gw-primary", disabled: Boolean(busy2), onClick: () => perform("\u8FDE\u63A5\u5F00\u53D1\u5BF9\u8BDD", async () => {
           await api.bindProject(status.projectRoot);
           setPage("conversation");
-        }), children: "\u8FDE\u63A5\u5F00\u53D1\u5BF9\u8BDD" }) : /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("button", { className: "gw-primary", disabled: !canChat && !(api.startPlanConversation && planDraft) || (knowledgeDraft || clarificationDraft) && inDiagnosisChat || Boolean(busy2) || !input.trim(), onClick: () => send(), children: "\u53D1\u9001\u5230\u5F00\u53D1\u5BF9\u8BDD" })
+        }), children: "\u8FDE\u63A5\u5F00\u53D1\u5BF9\u8BDD" }) : /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("button", { className: "gw-primary", disabled: !canChat && !(api.startPlanConversation && planDraft) && !(api.sendRepair && diagnosisDraft) || (knowledgeDraft || clarificationDraft) && inDiagnosisChat || Boolean(busy2) || !input.trim(), onClick: () => send(), children: "\u53D1\u9001\u5230\u5F00\u53D1\u5BF9\u8BDD" })
       ] })
     ] }),
     modal === "fileRecovery" && /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(FileRecovery, { api, Modal, blocked: agentState?.running || status?.tasks.some((t4) => t4.status === "running") ? "\u8BF7\u5148\u505C\u6B62 Agent\uFF0C\u5E76\u5728\u9879\u76EE\u6982\u89C8\u6838\u67E5\u4E2D\u65AD\u4EFB\u52A1\uFF0C\u518D\u5904\u7406\u6587\u4EF6\u3002" : "", onClose: () => setModal(null), onResolved: async (result) => {
@@ -7103,13 +7174,13 @@ function readIntakeSession(storage2, root) {
 function createIntakeSessionBridge({ storage: storage2, sessions, workspaces, connectWorkspace, open, readStatus, requestIdFor: requestIdFor2, wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms)) }) {
   const pending = /* @__PURE__ */ new Map();
   return function start(root, requestId) {
-    const key4 = projectPathKey(root);
-    if (pending.has(key4)) return pending.get(key4);
+    const key3 = projectPathKey(root);
+    if (pending.has(key3)) return pending.get(key3);
     const operation = (async () => {
-      if (projectPathKey((await readStatus()).projectRoot) !== key4) throw new Error("\u5F53\u524D\u9879\u76EE\u5DF2\u53D8\u5316\uFF0C\u672A\u53D1\u9001\u65B0\u5EFA\u8BF7\u6C42\u3002");
+      if (projectPathKey((await readStatus()).projectRoot) !== key3) throw new Error("\u5F53\u524D\u9879\u76EE\u5DF2\u53D8\u5316\uFF0C\u672A\u53D1\u9001\u65B0\u5EFA\u8BF7\u6C42\u3002");
       let record = readIntakeSession(storage2, root);
       if (record && record.requestId !== requestId) throw new Error("\u65B0\u5EFA\u8BF7\u6C42\u4E0E\u51C6\u5907\u5BF9\u8BDD\u4E0D\u4E00\u81F4\u3002");
-      const save = () => storage2.setItem(prefix5 + key4, JSON.stringify(record));
+      const save = () => storage2.setItem(prefix5 + key3, JSON.stringify(record));
       if (!record) {
         record = { version: 1, root, requestId, state: "prepared" };
         save();
@@ -7117,7 +7188,7 @@ function createIntakeSessionBridge({ storage: storage2, sessions, workspaces, co
       if (!record.sessionId) {
         if (record.state === "creating") {
           const snapshot = sessions.list.getSnapshot();
-          const matches = (snapshot.ids ?? []).filter((id2) => projectPathKey(snapshot.byId[id2]?.cwd) === key4 && snapshot.byId[id2]?.origin !== "subagent");
+          const matches = (snapshot.ids ?? []).filter((id2) => projectPathKey(snapshot.byId[id2]?.cwd) === key3 && snapshot.byId[id2]?.origin !== "subagent");
           if (matches.length !== 1) throw new Error("\u4E0A\u6B21\u521B\u5EFA\u5BF9\u8BDD\u672A\u80FD\u786E\u8BA4\u7ED3\u679C\uFF0C\u8BF7\u5148\u5728\u9879\u76EE\u5217\u8868\u6838\u5BF9\uFF0C\u907F\u514D\u91CD\u590D\u521B\u5EFA\u3002");
           record.sessionId = matches[0];
         } else {
@@ -7131,7 +7202,7 @@ function createIntakeSessionBridge({ storage: storage2, sessions, workspaces, co
       }
       const id = record.sessionId;
       const check = async () => {
-        if (projectPathKey(sessions.list.getSnapshot().byId[id]?.cwd) !== key4 || projectPathKey((await readStatus()).projectRoot) !== key4) throw new Error("\u65B0\u5EFA\u5BF9\u8BDD\u4E0E\u5DE5\u7A0B\u4E0D\u5339\u914D\uFF0C\u672A\u53D1\u9001\u3002");
+        if (projectPathKey(sessions.list.getSnapshot().byId[id]?.cwd) !== key3 || projectPathKey((await readStatus()).projectRoot) !== key3) throw new Error("\u65B0\u5EFA\u5BF9\u8BDD\u4E0E\u5DE5\u7A0B\u4E0D\u5339\u914D\uFF0C\u672A\u53D1\u9001\u3002");
       };
       await check();
       open(id);
@@ -7150,19 +7221,19 @@ function createIntakeSessionBridge({ storage: storage2, sessions, workspaces, co
       save();
       return id;
     })();
-    pending.set(key4, operation);
-    operation.finally(() => pending.delete(key4)).catch(() => {
+    pending.set(key3, operation);
+    operation.finally(() => pending.delete(key3)).catch(() => {
     });
     return operation;
   };
 }
 
 // src/mode-preference.mjs
-var key3 = "gamedev-mode-v1";
+var key2 = "gamedev-mode-v1";
 function installModePreference({ storage: storage2, layout, sessions, workspaces, panel }) {
   let saved;
   try {
-    saved = storage2.getItem(key3);
+    saved = storage2.getItem(key2);
   } catch {
   }
   let pending = saved === "game";
@@ -7171,7 +7242,7 @@ function installModePreference({ storage: storage2, layout, sessions, workspaces
   const remember = () => {
     pending = false;
     try {
-      storage2.setItem(key3, layout.panelInfo.getSnapshot().activePanelId === panel ? "game" : "normal");
+      storage2.setItem(key2, layout.panelInfo.getSnapshot().activePanelId === panel ? "game" : "normal");
     } catch {
     }
   };
@@ -7199,19 +7270,19 @@ function installModePreference({ storage: storage2, layout, sessions, workspaces
 // src/plan-conversation.mjs
 function createPlanConversationStarter({ storage: storage2, sessions, readStatus, selection, requestIdFor: requestIdFor2, connect, open }) {
   const active = /* @__PURE__ */ new Map();
-  return function start(root, text, key4, accepted = () => {
+  return function start(root, text, key3, accepted = () => {
   }) {
-    const destination = projectPathKey(root), hash = planStartHash(key4);
+    const destination = projectPathKey(root), hash = planStartHash(key3);
     if (!destination || !hash) return Promise.reject(new Error("\u5236\u4F5C\u8BF7\u6C42\u7F3A\u5C11\u9879\u76EE\u6216\u65B9\u6848\u7248\u672C\u3002"));
     const recordKey = "godot-workbench:plan-conversation:" + destination + ":" + hash;
-    const operationKey = recordKey + ":" + key4;
+    const operationKey = recordKey + ":" + key3;
     if (active.has(operationKey)) return active.get(operationKey);
     const operation = (async () => {
       let revision = selection.getSnapshot();
       const verify = async () => {
         const status = await readStatus();
         if (selection.getSnapshot() !== revision || projectPathKey(status.projectRoot) !== destination || !status.approved || status.planHash !== hash) throw new Error("\u9879\u76EE\u6216\u5F00\u53D1\u8BA1\u5212\u5DF2\u53D8\u5316\uFF0C\u5236\u4F5C\u8BF7\u6C42\u5C1A\u672A\u53D1\u9001\u3002");
-        assertPlanRequest(status, key4);
+        assertPlanRequest(status, key3);
       };
       await verify();
       let id = storage2.getItem(recordKey);
@@ -7230,7 +7301,7 @@ function createPlanConversationStarter({ storage: storage2, sessions, readStatus
         await new Promise((resolve) => setTimeout(resolve, 100));
       }
       await verify();
-      await createProjectMessageSender({ sessionId: id, sessions, readStatus, requestIdFor: requestIdFor2, selection, revision })(text, key4, root);
+      await createProjectMessageSender({ sessionId: id, sessions, readStatus, requestIdFor: requestIdFor2, selection, revision })(text, key3, root);
       accepted();
       return id;
     })();
@@ -7247,9 +7318,9 @@ var name = "godot-game-workbench-client";
 var inject = ["slots", "layout", "sessions", "uiConversation", "uiWorkspace", "workspaces", "theme"];
 var PANEL = "godot-game-workbench";
 var normalize = (value) => value.replaceAll("\\", "/").replace(/\/$/, "").toLowerCase();
-async function requestIdFor(key4) {
-  if (!key4) return crypto.randomUUID();
-  const bytes = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(key4))).slice(0, 16);
+async function requestIdFor(key3) {
+  if (!key3) return crypto.randomUUID();
+  const bytes = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(key3))).slice(0, 16);
   bytes[6] = bytes[6] & 15 | 64;
   bytes[8] = bytes[8] & 63 | 128;
   const hex = Array.from(bytes, (n10) => n10.toString(16).padStart(2, "0")).join("");
@@ -7258,7 +7329,7 @@ async function requestIdFor(key4) {
 function WorkbenchPanel({ renderSlot }) {
   return renderSlot("gamedev.session", {});
 }
-function SessionWorkbench({ sessionId, useSession, useSessions, renderFactorySlot, sessions, workspaces, theme, projectSelection, navigationIntent, bindProject, startIntake, startPlanConversation, openProjectSession, openAccountSettings, diagnosisDispatcher, diagnosisSender, onExit }) {
+function SessionWorkbench({ sessionId, useSession, useSessions, renderFactorySlot, sessions, workspaces, theme, projectSelection, navigationIntent, bindProject, startIntake, startPlanConversation, openProjectSession, openAccountSettings, diagnosisDispatcher, diagnosisSender, repairSender, onExit }) {
   const projectRevision = (0, import_react36.useSyncExternalStore)(projectSelection.subscribe, projectSelection.getSnapshot);
   (0, import_react36.useEffect)(() => {
     const previous = theme.getTheme().preference;
@@ -7280,8 +7351,8 @@ function SessionWorkbench({ sessionId, useSession, useSessions, renderFactorySlo
     matchesProject: (root) => Boolean(root && currentDirectory && normalize(root) === normalize(currentDirectory)),
     bindProject,
     pickProjectDirectory: typeof directoryPicker?.pick === "function" ? () => directoryPicker.pick() : void 0,
-    explainDiagnosis: (root, reportId, text, key4) => diagnosisSender(root, reportId, text, key4),
-    sendRepair: createDiagnosisRepairSender({ storage: localStorage, sessions, sessionId, readStatus: () => createApi().call("status"), requestIdFor, selection: projectSelection, revision: projectRevision, isArchived: (id) => workspaces.list.getSnapshot().archivedSessionIds.includes(id), open: openProjectSession }),
+    explainDiagnosis: (root, reportId, text, key3) => diagnosisSender(root, reportId, text, key3),
+    sendRepair: (text, key3, root, options) => repairSender(text, key3, root, { ...options, sessionId, revision: projectRevision }),
     requestDiagnosis: (root, report) => diagnosisDispatcher.request({ projectRoot: root, latestDiagnosis: report }, { manual: true }),
     diagnosisState: (status) => diagnosisDispatcher.state(status),
     watchDiagnosis: ({ root, reportId, sessionId: sessionId2, requestId }, onOutcome) => {
@@ -7330,6 +7401,19 @@ function apply(ctx) {
   };
   const diagnosisSender = createDiagnosisConversation({ storage: localStorage, sessions: ctx.sessions, readStatus: () => createApi().call("status"), requestIdFor, isArchived: (id) => ctx.workspaces.list.getSnapshot().archivedSessionIds.includes(id) });
   const diagnosisDispatcher = createDiagnosisDispatcher({ storage: localStorage, send: diagnosisSender });
+  const repairSender = createDiagnosisRepairSender({
+    storage: localStorage,
+    sessions: ctx.sessions,
+    selection: projectSelection,
+    requestIdFor,
+    readStatus: () => createApi().call("status"),
+    isArchived: (id) => ctx.workspaces.list.getSnapshot().archivedSessionIds.includes(id),
+    open: (root, id) => {
+      refreshProjectBinding("\u5EFA\u8BAE\u5DF2\u53D1\u9001\u5230\u5F00\u53D1\u5BF9\u8BDD\u3002");
+      ctx.uiWorkspace.openSession(id);
+      ctx.layout.selectPanel(PANEL);
+    }
+  });
   const startIntake = createIntakeSessionBridge({ storage: localStorage, sessions: ctx.sessions, workspaces: ctx.workspaces, connectWorkspace: (id) => ctx.uiWorkspace.connectWorkspace(id), readStatus: () => createApi().call("status"), requestIdFor, open: (id) => {
     refreshProjectBinding();
     ctx.uiWorkspace.openSession(id);
@@ -7385,6 +7469,7 @@ function apply(ctx) {
       startPlanConversation,
       diagnosisDispatcher,
       diagnosisSender,
+      repairSender,
       projectSelection,
       navigationIntent,
       openProjectSession: async (root, id) => {
