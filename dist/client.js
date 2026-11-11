@@ -2062,8 +2062,8 @@ function ChecklistRow({ title, label, state }) {
     /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { className: "gw-development-state", children: label })
   ] });
 }
-function DevelopmentChecklist({ status, action, muted, onToggleSound }) {
-  const tasks = (status?.tasks ?? []).filter((task) => task.currentPlan);
+function DevelopmentChecklist({ status, action, muted, onToggleSound, showTasks }) {
+  const tasks = showTasks ? (status?.tasks ?? []).filter((task) => task.currentPlan) : [];
   const rows = tasks.map((task) => {
     const reviewState = taskReviewState(task, status);
     const interrupted = task.status === "running" && status.recovery?.some((item) => item.taskId === task.id && item.state === "interrupted");
@@ -2074,8 +2074,6 @@ function DevelopmentChecklist({ status, action, muted, onToggleSound }) {
   const priority = rows.slice(4).find((row) => row.id === action?.taskId) ?? rows.slice(4).find((row) => row.state === "active") ?? rows.slice(4).find((row) => ["review", "attention"].includes(row.state));
   if (priority) visible[3] = priority;
   const more = rows.filter((row) => !visible.includes(row));
-  const ready = Boolean(status?.assessment?.ready);
-  const approved = Boolean(status?.approved);
   const Sound = muted ? c6 : c5;
   return /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("section", { className: "gw-development-checklist", "aria-label": "\u5F00\u53D1\u6E05\u5355", children: [
     /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("header", { className: "gw-development-header", children: [
@@ -2084,7 +2082,6 @@ function DevelopmentChecklist({ status, action, muted, onToggleSound }) {
       /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("button", { type: "button", className: "gw-icon-button", "aria-label": "\u5F00\u53D1\u63D0\u793A\u97F3", "aria-pressed": !muted, title: muted ? "\u5F00\u542F\u5F00\u53D1\u63D0\u793A\u97F3" : "\u5173\u95ED\u5F00\u53D1\u63D0\u793A\u97F3", onClick: onToggleSound, children: /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(Sound, { size: 18, "aria-hidden": "true" }) })
     ] }),
     action && /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("section", { className: "gw-development-action", "aria-label": "\u5F53\u524D\u4E0B\u4E00\u6B65", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("span", { children: "\u5F53\u524D\u4E00\u6B65" }),
       /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("strong", { children: action.title }),
       action.detail && /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("p", { children: action.detail }),
       action.run && /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("button", { type: "button", className: "gw-primary", disabled: action.disabled, onClick: action.run, children: [
@@ -2096,11 +2093,7 @@ function DevelopmentChecklist({ status, action, muted, onToggleSound }) {
         /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("p", { children: action.prompt })
       ] })
     ] }),
-    status && /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(import_jsx_runtime4.Fragment, { children: [
-      /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("ol", { className: "gw-development-list", "aria-label": "\u65B9\u6848\u51C6\u5907", children: [
-        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(ChecklistRow, { title: "\u6574\u7406\u5F00\u53D1\u8BA1\u5212", label: ready ? "\u5DF2\u6574\u7406" : "\u5F85\u8865\u5145", state: ready ? "done" : "pending" }),
-        /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(ChecklistRow, { title: "\u786E\u8BA4\u8303\u56F4\u4E0E\u9A8C\u6536", label: approved ? "\u5DF2\u786E\u8BA4" : "\u5F85\u786E\u8BA4", state: approved ? "done" : "pending" })
-      ] }),
+    rows.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(import_jsx_runtime4.Fragment, { children: [
       visible.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)(import_jsx_runtime4.Fragment, { children: [
         /* @__PURE__ */ (0, import_jsx_runtime4.jsxs)("div", { className: "gw-development-task-heading", children: [
           /* @__PURE__ */ (0, import_jsx_runtime4.jsx)("h3", { children: "\u5236\u4F5C\u4E0E\u8BD5\u73A9" }),
@@ -2609,7 +2602,7 @@ function AcceptanceCoverage({ coverage, label = "\u65B9\u6848\u9A8C\u6536" }) {
 
 // src/TaskOverview.jsx
 var import_jsx_runtime10 = require("react/jsx-runtime");
-function TaskOverview({ status, renderTask, onDiagnose, openCoverage = false }) {
+function TaskOverview({ status, renderTask, openCoverage = false }) {
   const coverageRef = (0, import_react13.useRef)(null);
   (0, import_react13.useEffect)(() => {
     if (openCoverage) coverageRef.current?.scrollIntoView({ block: "nearest" });
@@ -2618,42 +2611,21 @@ function TaskOverview({ status, renderTask, onDiagnose, openCoverage = false }) 
   const review = current.filter((task) => task.status === "awaiting-review" || taskReviewState(task, status) === "stale");
   const history = status.tasks.filter((task) => !task.currentPlan || task.status === "accepted" && !review.includes(task));
   const groups = [
-    ["review", "\u8BD5\u73A9\u4E0E\u590D\u9A8C", "\u8BD5\u8FC7\u540E\u8BB0\u5F55\u901A\u8FC7\u6216\u9700\u8981\u8C03\u6574\u7684\u5730\u65B9\u3002"],
-    ["attention", "\u9700\u8981\u4FEE\u7F2E", "\u5148\u89E3\u51B3\u8FD9\u91CC\u7684\u95EE\u9898\uFF0C\u518D\u7EE7\u7EED\u5236\u4F5C\u3002"],
-    ["running", "\u6B63\u5728\u5236\u4F5C", "\u5B8C\u6210\u540E\u4F1A\u63D0\u9192\u4F60\u67E5\u770B\u3002"],
-    ["pending", "\u63A5\u4E0B\u6765\u505A", "\u6309\u4F9D\u8D56\u548C\u6240\u9009\u5236\u4F5C\u8282\u594F\u63A8\u8FDB\u3002"]
+    ["review", "\u5F85\u8BD5\u73A9\u6216\u590D\u9A8C"],
+    ["attention", "\u5F85\u5904\u7406"],
+    ["running", "\u5236\u4F5C\u4E2D"],
+    ["pending", "\u5F85\u5F00\u59CB"]
   ];
   const select = (key3) => key3 === "review" ? review : current.filter((task) => key3 === "attention" ? ["failed", "cancelled"].includes(task.status) : task.status === key3);
-  const report = status.latestDiagnosis;
-  const checkText = !report ? "\u5C1A\u672A\u68C0\u67E5" : report.stale ? "\u9700\u8981\u91CD\u65B0\u68C0\u67E5" : report.coverage?.engineImport === "passed" && !report.issues?.some((issue) => issue.severity === "blocking") ? "\u5DE5\u7A0B\u68C0\u67E5\u5DF2\u901A\u8FC7" : "\u67E5\u770B\u68C0\u67E5\u7ED3\u679C";
   return /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)(import_jsx_runtime10.Fragment, { children: [
-    /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("section", { className: "gw-overview-cards", "aria-label": "\u9879\u76EE\u5F53\u524D\u72B6\u6001", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("article", { children: [
-        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { children: "\u672C\u6B21\u8BD5\u73A9" }),
-        /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("strong", { children: [
-          review.length,
-          " ",
-          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("small", { children: "\u9879\u5F85\u8BD5\u73A9\u6216\u590D\u9A8C" })
-        ] })
-      ] }),
-      /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("article", { children: [
-        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("span", { children: "\u5DE5\u7A0B\u68C0\u67E5" }),
-        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("strong", { children: checkText }),
-        onDiagnose && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("button", { className: "gw-text-action", onClick: onDiagnose, children: "\u67E5\u770B\u8BCA\u65AD" })
-      ] })
-    ] }),
-    !current.length && /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "gw-empty", children: status.approved ? "\u8BA1\u5212\u5DF2\u786E\u8BA4\uFF0C\u53EF\u4EE5\u5F00\u59CB\u7B2C\u4E00\u6B65\u5236\u4F5C\u3002" : "\u5148\u786E\u8BA4\u8BA1\u5212\uFF0C\u518D\u5F00\u59CB\u5236\u4F5C\u3002" }),
-    groups.map(([key3, title, hint]) => {
+    groups.map(([key3, title]) => {
       const tasks = select(key3);
       return tasks.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("section", { className: "gw-task-group", "aria-label": title, children: [
-        /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("header", { children: [
-          /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("h2", { children: [
-            title,
-            " ",
-            /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("small", { children: tasks.length })
-          ] }),
-          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("p", { children: hint })
-        ] }),
+        /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("header", { children: /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("h2", { children: [
+          title,
+          " ",
+          /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("small", { children: tasks.length })
+        ] }) }),
         /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "gw-task-grid", children: tasks.map(renderTask) })
       ] }, key3);
     }),
@@ -2664,11 +2636,11 @@ function TaskOverview({ status, renderTask, onDiagnose, openCoverage = false }) 
       ] }),
       /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("div", { className: "gw-task-grid", children: history.map(renderTask) })
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("details", { className: "gw-overview-details", ref: coverageRef, open: openCoverage || void 0, children: [
-      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("summary", { children: "\u5168\u90E8\u8BD5\u73A9\u76EE\u6807\u4E0E\u8303\u56F4" }),
+    status.plan && /* @__PURE__ */ (0, import_jsx_runtime10.jsxs)("details", { className: "gw-overview-details", ref: coverageRef, open: openCoverage || void 0, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("summary", { children: "\u8BD5\u73A9\u6807\u51C6\u4E0E\u8303\u56F4" }),
       /* @__PURE__ */ (0, import_jsx_runtime10.jsx)(AcceptanceCoverage, { coverage: status.acceptanceCoverage }),
-      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("h3", { children: "\u8FD9\u6B21\u6682\u4E0D\u505A" }),
-      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("p", { children: status.plan?.outOfScope?.join("\uFF1B") || "\u5C1A\u672A\u660E\u786E" })
+      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("h3", { children: "\u6682\u65F6\u4E0D\u505A" }),
+      /* @__PURE__ */ (0, import_jsx_runtime10.jsx)("p", { children: status.plan.outOfScope?.join("\uFF1B") || "\u5C1A\u672A\u660E\u786E" })
     ] })
   ] });
 }
@@ -4179,15 +4151,12 @@ function ProducerDiagnosis({ report, busy: busy2, sent, canChat, canSendSuggesti
   }
   return /* @__PURE__ */ (0, import_jsx_runtime17.jsxs)("div", { className: "gw-producer-diagnosis", children: [
     report.stale ? /* @__PURE__ */ (0, import_jsx_runtime17.jsxs)("section", { "aria-label": "\u4F18\u5148\u884C\u52A8", className: "gw-diagnosis-priorities gw-stale-priority", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime17.jsx)("h2", { children: "\u5148\u66F4\u65B0\u68C0\u67E5\u7ED3\u679C" }),
-      /* @__PURE__ */ (0, import_jsx_runtime17.jsx)("p", { children: "\u5DE5\u7A0B\u6216\u8BA1\u5212\u5DF2\u53D8\u5316\uFF0C\u65E7\u7ED3\u679C\u4E0D\u80FD\u7528\u4E8E\u5224\u65AD\u5F53\u524D\u7248\u672C\u3002" }),
+      /* @__PURE__ */ (0, import_jsx_runtime17.jsx)("h2", { children: "\u68C0\u67E5\u7ED3\u679C\u5DF2\u8FC7\u671F" }),
+      /* @__PURE__ */ (0, import_jsx_runtime17.jsx)("p", { children: "\u5DE5\u7A0B\u6216\u8BA1\u5212\u6709\u53D8\u5316\u3002" }),
       /* @__PURE__ */ (0, import_jsx_runtime17.jsx)("button", { className: "gw-primary", disabled: busy2 || !onRecheck, onClick: onRecheck, children: "\u91CD\u65B0\u68C0\u67E5" })
-    ] }) : /* @__PURE__ */ (0, import_jsx_runtime17.jsxs)("section", { "aria-label": "\u4F18\u5148\u884C\u52A8", className: "gw-diagnosis-priorities", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime17.jsx)("h2", { children: "\u73B0\u5728\u5148\u505A\u8FD9\u4E00\u4EF6" }),
-      !grouped.priority.length ? /* @__PURE__ */ (0, import_jsx_runtime17.jsx)("p", { children: "\u672C\u6B21\u672A\u53D1\u73B0\u5177\u4F53\u95EE\u9898\u3002\u672A\u8986\u76D6\u7684\u90E8\u5206\u4ECD\u9700\u9A8C\u8BC1\uFF0C\u68C0\u67E5\u901A\u8FC7\u4E0D\u4EE3\u8868\u6E38\u620F\u597D\u73A9\u3002" }) : grouped.priority.slice(0, 1).map((issue) => /* @__PURE__ */ (0, import_jsx_runtime17.jsx)(Focus, { issue }, issue.id))
-    ] }),
+    ] }) : /* @__PURE__ */ (0, import_jsx_runtime17.jsx)("section", { "aria-label": "\u4F18\u5148\u884C\u52A8", className: "gw-diagnosis-priorities", children: !grouped.priority.length ? /* @__PURE__ */ (0, import_jsx_runtime17.jsx)("p", { children: "\u672C\u6B21\u68C0\u67E5\u672A\u53D1\u73B0\u95EE\u9898\u3002\u6E38\u620F\u4F53\u9A8C\u8BF7\u5B9E\u9645\u8BD5\u73A9\u3002" }) : /* @__PURE__ */ (0, import_jsx_runtime17.jsx)(Focus, { issue: grouped.priority[0] }) }),
     /* @__PURE__ */ (0, import_jsx_runtime17.jsxs)("details", { className: "gw-diagnosis-details", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime17.jsx)("summary", { children: "\u67E5\u770B\u5168\u90E8\u8BC4\u4F30 \xB7 \u73A9\u6CD5\u3001\u8FDB\u5EA6\u3001\u5F00\u53D1\u3001\u4EA4\u4ED8" }),
+      /* @__PURE__ */ (0, import_jsx_runtime17.jsx)("summary", { children: "\u5168\u90E8\u8BCA\u65AD" }),
       /* @__PURE__ */ (0, import_jsx_runtime17.jsx)("div", { className: "gw-diagnosis-modules", children: grouped.modules.map((module2) => /* @__PURE__ */ (0, import_jsx_runtime17.jsxs)("section", { className: "gw-diagnosis-module", "aria-label": module2.title, children: [
         /* @__PURE__ */ (0, import_jsx_runtime17.jsxs)("header", { children: [
           /* @__PURE__ */ (0, import_jsx_runtime17.jsx)("h2", { children: module2.title }),
@@ -4203,27 +4172,18 @@ function ProducerDiagnosis({ report, busy: busy2, sent, canChat, canSendSuggesti
           report.producerFacts.tasks.awaitingReview,
           " \u9879"
         ] }),
-        module2.id === "engineering" && /* @__PURE__ */ (0, import_jsx_runtime17.jsxs)("p", { className: "gw-small", children: [
-          report.stale ? "\u4E0A\u6B21 Godot \u5BFC\u5165" : "Godot \u5BFC\u5165",
-          "\uFF1A",
-          engineImportStatus(report.coverage?.engineImport).label,
-          report.stale ? "\uFF08\u9700\u91CD\u68C0\uFF09" : ""
-        ] }),
         module2.id === "verification" && /* @__PURE__ */ (0, import_jsx_runtime17.jsxs)("p", { className: "gw-small", children: [
           "\u4EBA\u5DE5\u8BD5\u73A9\uFF1A",
           report.coverage?.humanPlaytest === "not-run" ? "\u672A\u6267\u884C" : "\u8BF7\u6838\u5BF9\u72EC\u7ACB\u8BB0\u5F55"
         ] }),
-        module2.issues.length ? /* @__PURE__ */ (0, import_jsx_runtime17.jsxs)(import_jsx_runtime17.Fragment, { children: [
-          /* @__PURE__ */ (0, import_jsx_runtime17.jsx)("ul", { children: module2.issues.slice(0, 2).map((issue) => /* @__PURE__ */ (0, import_jsx_runtime17.jsx)("li", { children: diagnosisCopy(issue).summary }, issue.id)) }),
-          /* @__PURE__ */ (0, import_jsx_runtime17.jsxs)("details", { children: [
-            /* @__PURE__ */ (0, import_jsx_runtime17.jsxs)("summary", { children: [
-              "\u67E5\u770B\u672C\u6A21\u5757 ",
-              module2.issues.length,
-              " \u9879\u8BC4\u4F30\u4E0E\u5EFA\u8BAE"
-            ] }),
-            module2.issues.map((issue) => /* @__PURE__ */ (0, import_jsx_runtime17.jsx)(Issue, { issue }, issue.id))
-          ] })
-        ] }) : /* @__PURE__ */ (0, import_jsx_runtime17.jsx)("p", { className: "gw-small", children: "\u5C1A\u65E0\u5177\u4F53\u8BC4\u5BA1\u7ED3\u8BBA\uFF0C\u4E0D\u8868\u793A\u672C\u6A21\u5757\u5DF2\u901A\u8FC7\u3002" })
+        module2.issues.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime17.jsxs)("details", { children: [
+          /* @__PURE__ */ (0, import_jsx_runtime17.jsxs)("summary", { children: [
+            "\u67E5\u770B ",
+            module2.issues.length,
+            " \u9879\u5EFA\u8BAE"
+          ] }),
+          module2.issues.map((issue) => /* @__PURE__ */ (0, import_jsx_runtime17.jsx)(Issue, { issue }, issue.id))
+        ] })
       ] }, module2.id)) }),
       grouped.unclassified.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime17.jsxs)("details", { children: [
         /* @__PURE__ */ (0, import_jsx_runtime17.jsxs)("summary", { children: [
@@ -5086,26 +5046,20 @@ function PlanDocument({ status, confirmation, onDocuments }) {
 }
 function StartPage({ onPlan, onDiscuss, onProject }) {
   return /* @__PURE__ */ (0, import_jsx_runtime24.jsxs)("section", { className: "gw-start-page", "aria-label": "\u5F00\u59CB\u6E38\u620F\u9879\u76EE", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime24.jsx)("span", { className: "gw-deck-tag", children: "\u6E38\u620F\u5F00\u53D1\u5DE5\u4F5C\u53F0" }),
-    /* @__PURE__ */ (0, import_jsx_runtime24.jsx)("h1", { children: "\u4E00\u8D77\u505A\u51FA\u4F60\u7684\u7B2C\u4E00\u4E2A\u53EF\u73A9\u7248\u672C" }),
-    /* @__PURE__ */ (0, import_jsx_runtime24.jsx)("p", { className: "gw-muted", children: "\u5148\u60F3\u6E05\u600E\u4E48\u73A9\u3001\u505A\u6210\u4EC0\u4E48\u6837\uFF0C\u518D\u5236\u4F5C\u4E00\u6BB5\u80FD\u4ECE\u5934\u8BD5\u73A9\u7684\u4F53\u9A8C\u3002" }),
+    /* @__PURE__ */ (0, import_jsx_runtime24.jsx)("h1", { children: "\u5F00\u59CB\u505A\u6E38\u620F" }),
     /* @__PURE__ */ (0, import_jsx_runtime24.jsxs)("div", { className: "gw-launch-deck", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(LaunchCard, { icon: c3, tag: "\u65B0\u9879\u76EE", title: "\u4ECE\u60F3\u6CD5\u5F00\u59CB", detail: "\u548C AI \u786E\u5B9A\u73A9\u6CD5\u3001\u7F8E\u672F\u548C\u7B2C\u4E00\u8F6E\u8BD5\u73A9\u5185\u5BB9\u3002\u65B9\u6848\u786E\u8BA4\u540E\u518D\u5236\u4F5C\u3002", action: "\u8BA9 AI \u5E2E\u6211\u65B0\u5EFA", onClick: () => onProject("create"), primary: true }),
-      /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(LaunchCard, { icon: p2, tag: "\u7EE7\u7EED\u5236\u4F5C", title: "\u63A5\u5165\u5DF2\u6709\u6E38\u620F", detail: "\u9009\u62E9\u4F60\u7684 Godot \u5DE5\u7A0B\uFF0C\u63A5\u7740\u6574\u7406\u8BA1\u5212\u3001\u8BD5\u73A9\u548C\u4FEE\u7F2E\u3002", action: "\u5BFC\u5165\u5DF2\u6709\u5DE5\u7A0B", onClick: () => onProject("import") }),
-      /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(LaunchCard, { icon: s5, tag: "\u5148\u505A\u65B9\u6848", title: "\u5199\u4E0B\u5F00\u53D1\u8BA1\u5212", detail: "\u5DF2\u6709\u660E\u786E\u60F3\u6CD5\u65F6\uFF0C\u76F4\u63A5\u586B\u5199\u73A9\u6CD5\u3001\u8303\u56F4\u548C\u9A8C\u6536\u6807\u51C6\u3002", action: onDiscuss ? "\u6211\u5DF2\u6709\u65B9\u6848\uFF0C\u76F4\u63A5\u586B\u5199" : "\u6574\u7406\u7B2C\u4E00\u7248\u65B9\u6848", onClick: onPlan })
+      /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(LaunchCard, { icon: c3, title: "\u65B0\u6E38\u620F", detail: "\u548C AI \u6572\u5B9A\u73A9\u6CD5\u3001\u7F8E\u672F\u548C\u7B2C\u4E00\u7248\u5185\u5BB9\u3002", action: "\u8BA9 AI \u5E2E\u6211\u65B0\u5EFA", onClick: () => onProject("create"), primary: true }),
+      /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(LaunchCard, { icon: p2, title: "\u5DF2\u6709\u6E38\u620F", detail: "\u63A5\u7740\u505A\u4E00\u4E2A Godot \u5DE5\u7A0B\u3002", action: "\u5BFC\u5165\u5DF2\u6709\u5DE5\u7A0B", onClick: () => onProject("import") })
     ] }),
-    onDiscuss && /* @__PURE__ */ (0, import_jsx_runtime24.jsxs)("button", { className: "gw-text-action gw-start-discuss", onClick: onDiscuss, children: [
-      "\u5148\u804A\u6E05\u695A\u6E38\u620F\u60F3\u6CD5 ",
-      /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(s, { size: 16, "aria-hidden": "true" })
+    /* @__PURE__ */ (0, import_jsx_runtime24.jsxs)("div", { className: "gw-start-alternatives", children: [
+      onDiscuss && /* @__PURE__ */ (0, import_jsx_runtime24.jsx)("button", { className: "gw-text-action", onClick: onDiscuss, children: "\u53EA\u804A\u73A9\u6CD5" }),
+      /* @__PURE__ */ (0, import_jsx_runtime24.jsx)("button", { className: "gw-text-action", onClick: onPlan, children: "\u624B\u52A8\u586B\u5199\u8BA1\u5212" })
     ] })
   ] });
 }
-function LaunchCard({ icon: Icon, tag, title, detail, action, onClick, primary = false }) {
+function LaunchCard({ icon: Icon, title, detail, action, onClick, primary = false }) {
   return /* @__PURE__ */ (0, import_jsx_runtime24.jsxs)("article", { className: `gw-deck-card gw-launch-card${primary ? " is-primary" : ""}`, children: [
-    /* @__PURE__ */ (0, import_jsx_runtime24.jsxs)("div", { className: "gw-card-cover", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime24.jsx)("span", { className: "gw-deck-tag", children: tag }),
-      /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(Icon, { size: 52, weight: "duotone", "aria-hidden": "true" })
-    ] }),
+    /* @__PURE__ */ (0, import_jsx_runtime24.jsx)("div", { className: "gw-card-cover", children: /* @__PURE__ */ (0, import_jsx_runtime24.jsx)(Icon, { size: 44, weight: "duotone", "aria-hidden": "true" }) }),
     /* @__PURE__ */ (0, import_jsx_runtime24.jsxs)("div", { className: "gw-card-content", children: [
       /* @__PURE__ */ (0, import_jsx_runtime24.jsx)("h2", { children: title }),
       /* @__PURE__ */ (0, import_jsx_runtime24.jsx)("p", { children: detail }),
@@ -5755,19 +5709,16 @@ function TaskCard({ task, reviewState, health, busy: busy2, onReview, onRecover,
   ] });
 }
 var overviewTools = [
-  ["parameters", "\u6E38\u620F\u53C2\u6570", "\u67E5\u770B\u6570\u503C\u4E0E\u5E73\u8861\u8BBE\u7F6E", l4],
-  ["assets", "\u7D20\u6750\u4E0E\u8D44\u6E90", "\u67E5\u770B\u5DE5\u7A0B\u4F7F\u7528\u7684\u8D44\u6E90", n6],
-  ["fixes", "\u4E34\u65F6\u4FEE\u590D", "\u8FFD\u8E2A\u5F85\u590D\u67E5\u7684\u6539\u52A8", m4]
+  ["parameters", "\u6E38\u620F\u53C2\u6570", l4],
+  ["assets", "\u7D20\u6750\u4E0E\u8D44\u6E90", n6],
+  ["fixes", "\u4E34\u65F6\u4FEE\u590D", m4]
 ];
 function OverviewTools({ onOpen }) {
-  return /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("section", { className: "gw-overview-tools", "aria-label": "\u9879\u76EE\u5DE5\u5177", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("h2", { children: "\u9879\u76EE\u5DE5\u5177" }),
-    /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("div", { className: "gw-tool-deck", children: overviewTools.map(([id, title, detail, Icon]) => /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("button", { className: "gw-tool-card", "aria-label": title, onClick: () => onOpen(id), children: [
+  return /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("details", { className: "gw-overview-tools gw-overview-details", children: [
+    /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("summary", { children: "\u9879\u76EE\u5DE5\u5177" }),
+    /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("div", { className: "gw-tool-deck", children: overviewTools.map(([id, title, Icon]) => /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("button", { className: "gw-tool-card", "aria-label": title, onClick: () => onOpen(id), children: [
       /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("span", { className: "gw-tool-icon", children: /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(Icon, { size: 28, weight: "duotone", "aria-hidden": "true" }) }),
-      /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("span", { children: [
-        /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("strong", { children: title }),
-        /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("small", { children: detail })
-      ] }),
+      /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("strong", { children: title }),
       /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(s2, { size: 16, "aria-hidden": "true" })
     ] }, id)) })
   ] });
@@ -6214,13 +6165,13 @@ function App({ api = defaultApi, conversation = null, agentState = null, host = 
   const firstRequestSent = firstRequest && sent.has(firstRequest.key);
   function checklistAction() {
     if (!status) return null;
-    if (!status.plan) return { title: "\u5148\u8BF4\u8BF4\u4F60\u60F3\u505A\u4EC0\u4E48", detail: "\u4ECE\u6838\u5FC3\u73A9\u6CD5\u548C\u73A9\u5BB6\u76EE\u6807\u5F00\u59CB\u3002" };
+    if (!status.plan) return { title: "\u5148\u8BF4\u8BF4\u4F60\u60F3\u505A\u4EC0\u4E48" };
     if (!status.approved) {
       const ready = status.assessment.ready;
       const viewingPlan = page === "plan";
       return {
         title: ready ? "\u8BA1\u5212\u7B49\u4F60\u786E\u8BA4" : "\u8865\u9F50\u5F00\u53D1\u8BA1\u5212",
-        detail: ready ? "\u6838\u5BF9\u73A9\u6CD5\u3001\u8303\u56F4\u548C\u8BD5\u73A9\u6807\u51C6\u3002" : status.assessment.questions[0] || "\u5148\u660E\u786E\u73A9\u6CD5\u548C\u8303\u56F4\u3002",
+        detail: viewingPlan || ready ? null : status.assessment.questions[0] || "\u5148\u660E\u786E\u73A9\u6CD5\u548C\u8303\u56F4\u3002",
         label: viewingPlan ? "\u524D\u5F80\u5F00\u5DE5\u8BBE\u7F6E" : "\u6253\u5F00\u5F00\u53D1\u8BA1\u5212",
         run: !viewingPlan ? openPlan : ready ? () => {
           const section = planLaunchRef.current;
@@ -6380,11 +6331,10 @@ function App({ api = defaultApi, conversation = null, agentState = null, host = 
     ] }),
     panels.handles,
     /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("main", { className: "gw-main", children: [
-      /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("div", { className: "gw-stepper", "aria-label": "\u5F00\u53D1\u8FDB\u5EA6", title: "\u5F53\u524D\u6D41\u7A0B\u4F4D\u7F6E\uFF0C\u4E0D\u4EE3\u8868\u5404\u9879\u68C0\u67E5\u6216\u8BD5\u73A9\u5747\u5DF2\u901A\u8FC7", children: visibleSteps.map((label, i) => {
+      ["plan", "conversation", "overview"].includes(page) && /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("ol", { className: "gw-stepper", "aria-label": "\u5F00\u53D1\u8FDB\u5EA6", children: visibleSteps.map((label, i) => {
         const current = i === phase;
         const complete = !lifecycleManaged && (i < phase || status?.approved && status.phase === "finish");
-        const target = i <= 2 || current && pendingPlan ? "plan" : !lifecycleManaged && (i === 4 || i === 6) ? "diagnose" : "overview";
-        return /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("button", { className: `${complete ? "complete" : ""} ${current ? "current" : ""}`, onClick: () => setPage(target), "aria-current": current ? "step" : void 0, children: [
+        return /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("li", { className: `${complete ? "complete" : ""} ${current ? "current" : ""}`, "aria-current": current ? "step" : void 0, children: [
           /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("span", { children: i + 1 }),
           /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("b", { children: [
             label,
@@ -6448,7 +6398,15 @@ function App({ api = defaultApi, conversation = null, agentState = null, host = 
           /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("button", { className: "gw-secondary", onClick: () => setModal("recordRecovery"), children: "\u68C0\u67E5\u8BB0\u5F55\u6062\u590D" })
         ] })
       ] }) : /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(import_jsx_runtime26.Fragment, { children: /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("div", { className: `gw-main-scroll ${page === "conversation" ? "conversation-mode" : ""}`, children: [
-        page === "plan" && (status.plan ? /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)(import_jsx_runtime26.Fragment, { children: [
+        !status.plan && (page === "plan" || page === "overview" && overviewView === "tasks") && /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(StartPage, { onPlan: () => {
+          setPage("plan");
+          setModal("edit");
+        }, onDiscuss: guidedPlan ? continuePlanning : api.bindProject ? () => perform("\u51C6\u5907\u9879\u76EE\u5BF9\u8BDD", async () => {
+          if (!canChat) await api.bindProject(status.projectRoot);
+          setPage("conversation");
+        }) : void 0, onProject: (mode) => setModal(mode === "create" ? "newProject" : "projectImport") }),
+        !status.plan && page === "overview" && overviewView === "tasks" && /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(OverviewTools, { onOpen: setOverviewView }),
+        page === "plan" && status.plan && /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)(import_jsx_runtime26.Fragment, { children: [
           /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("header", { className: "gw-plan-heading", children: [
             /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("h1", { children: [
               status.plan.title,
@@ -6469,10 +6427,7 @@ function App({ api = defaultApi, conversation = null, agentState = null, host = 
             status.developmentMode === "continuous" ? "\u8FDE\u7EED\u5236\u4F5C\uFF0C\u96C6\u4E2D\u8BD5\u73A9" : "\u9010\u9879\u786E\u8BA4"
           ] }),
           !guidedPlan && planLaunch
-        ] }) : /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(StartPage, { onPlan: () => setModal("edit"), onDiscuss: guidedPlan ? continuePlanning : api.bindProject ? () => perform("\u51C6\u5907\u9879\u76EE\u5BF9\u8BDD", async () => {
-          if (!canChat) await api.bindProject(status.projectRoot);
-          setPage("conversation");
-        }) : void 0, onProject: (mode) => setModal(mode === "create" ? "newProject" : "projectImport") })),
+        ] }),
         page === "conversation" && /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("div", { className: "gw-native-conversation", children: canChat ? conversation : /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("div", { className: "gw-empty", children: [
           /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("h2", { children: "\u5148\u8FDE\u63A5\u5F53\u524D\u9879\u76EE\u7684\u5BF9\u8BDD" }),
           /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("p", { children: api.bindProject ? "\u5728\u8FD9\u91CC\u65B0\u5EFA\u5BF9\u8BDD\uFF0C\u6216\u4ECE\u9879\u76EE\u5217\u8868\u9009\u62E9\u5DF2\u6709\u5BF9\u8BDD\u3002" : "\u8BF7\u5728 DSH \u4E2D\u6253\u5F00\u6B64\u9879\u76EE\uFF0C\u518D\u8FDE\u63A5\u5F00\u53D1\u5BF9\u8BDD\u3002" }),
@@ -6493,11 +6448,10 @@ function App({ api = defaultApi, conversation = null, agentState = null, host = 
           },
           status.projectRoot
         ),
-        page === "overview" && /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("div", { className: "gw-section-page gw-project-showcase", children: [
+        page === "overview" && (status.plan || overviewView !== "tasks") && /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("div", { className: "gw-section-page gw-project-showcase", children: [
           /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("header", { className: "gw-showcase-header", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("span", { className: "gw-deck-tag", children: "\u9879\u76EE\u6982\u89C8" }),
-            /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("h1", { children: overviewView === "tasks" ? status.plan?.title || "\u4F60\u7684\u6E38\u620F\u9879\u76EE" : overviewTools.find(([id]) => id === overviewView)?.[1] }),
-            overviewView === "tasks" ? /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("p", { className: "gw-muted", children: status.plan?.concept || "\u5148\u660E\u786E\u73A9\u5BB6\u4F1A\u505A\u4EC0\u4E48\uFF0C\u518D\u51B3\u5B9A\u7B2C\u4E00\u7248\u8981\u505A\u591A\u5927\u3002" }) : /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("button", { className: "gw-text-action", onClick: () => setOverviewView("tasks"), children: "\u8FD4\u56DE\u9879\u76EE\u6982\u89C8" })
+            /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("h1", { children: overviewView === "tasks" ? status.plan?.title || status.configuration?.title || "\u9879\u76EE\u6982\u89C8" : overviewTools.find(([id]) => id === overviewView)?.[1] }),
+            overviewView !== "tasks" && /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("button", { className: "gw-text-action", onClick: () => setOverviewView("tasks"), children: "\u8FD4\u56DE\u6982\u89C8" })
           ] }),
           overviewView !== "tasks" && /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("nav", { className: "gw-tabs gw-project-tabs", "aria-label": "\u9879\u76EE\u5DE5\u5177\u5207\u6362", children: overviewTools.map(([id, title]) => /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("button", { className: overviewView === id ? "active" : "", "aria-current": overviewView === id ? "page" : void 0, onClick: () => setOverviewView(id), children: title }, id)) }),
           overviewView === "fixes" ? /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(TemporaryFixes, { api, status, blocked: Boolean(agentState?.running || checking), onSaved: refresh }, status.projectRoot) : overviewView !== "tasks" ? /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(ProjectResources, { api, mode: overviewView, approved: status.approved, onSimulationSetup: requestSimulationSetup, blocked: Boolean(busy2) || agentState?.running || status.tasks.some((t4) => t4.status === "running") || checking ? "\u8BF7\u5148\u7ED3\u675F\u5F53\u524D\u6267\u884C\u6216\u68C0\u67E5\uFF0C\u518D\u4FDD\u5B58\u8D44\u6E90\u3002" : "", onSaved: async () => {
@@ -6511,7 +6465,7 @@ function App({ api = defaultApi, conversation = null, agentState = null, host = 
             } else setNotice("\u5EFA\u8BAE\u5C1A\u672A\u53D1\u9001\uFF0C\u8BF7\u8FDE\u63A5\u672C\u9879\u76EE\u5BF9\u8BDD\u3002");
           }) }, status.projectRoot) : /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)(import_jsx_runtime26.Fragment, { children: [
             /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(Lifecycle, { status, api, busy: Boolean(busy2) || Boolean(agentState?.running && !inDiagnosisChat) || checking, onSaved: refresh, onRepair: requestIterationRepair, onPlan: () => setPage("plan"), onBuildAssist: assistBuildFailure, openQa: overviewTarget === "lifecycle", openRepair: overviewTarget === "repair" && nextStage?.target === "repair" }, status.projectId),
-            /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(TaskOverview, { status, openCoverage: overviewTarget === "coverage", onDiagnose: !checkBanner && nextStage?.page !== "diagnose" ? () => setPage("diagnose") : void 0, renderTask: (task) => /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(TaskCard, { task, reviewState: task.currentPlan ? taskReviewState(task, status) : null, health: status.recovery?.find((item) => item.taskId === task.id), busy: Boolean(busy2), onReview: () => openTaskReview(task), onRecover: () => setModal({ recoveryTask: task }), onChanges: () => setModal({ changesTask: task }), onRetry: () => perform("\u91CD\u65B0\u5B89\u6392\u4EFB\u52A1", async () => {
+            /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(TaskOverview, { status, openCoverage: overviewTarget === "coverage", renderTask: (task) => /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(TaskCard, { task, reviewState: task.currentPlan ? taskReviewState(task, status) : null, health: status.recovery?.find((item) => item.taskId === task.id), busy: Boolean(busy2), onReview: () => openTaskReview(task), onRecover: () => setModal({ recoveryTask: task }), onChanges: () => setModal({ changesTask: task }), onRetry: () => perform("\u91CD\u65B0\u5B89\u6392\u4EFB\u52A1", async () => {
               await api.call("taskUpdate", { taskId: task.id, action: "retry" });
               await refresh();
               setNotice("\u4EFB\u52A1\u5DF2\u56DE\u5230\u5F85\u5F00\u59CB\u3002\u6838\u5BF9\u5DF2\u6709\u6539\u52A8\u540E\uFF0C\u518D\u8BA9 Agent \u7EE7\u7EED\u3002");
@@ -6520,25 +6474,10 @@ function App({ api = defaultApi, conversation = null, agentState = null, host = 
           ] })
         ] }),
         page === "diagnose" && /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("div", { className: "gw-section-page gw-diagnosis-page", children: [
-          /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("div", { className: "gw-overview-heading", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("div", { children: [
-              /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("h1", { children: "\u9879\u76EE\u8BCA\u65AD" }),
-              /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("p", { className: "gw-small gw-muted", children: "\u770B\u770B\u73A9\u6CD5\u3001\u5236\u4F5C\u8303\u56F4\u548C\u5DE5\u7A0B\u8FD8\u6709\u54EA\u91CC\u9700\u8981\u6838\u5BF9\u3002" })
-            ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("div", { className: "gw-diagnosis-actions", children: [
-              /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("select", { "aria-label": "\u68C0\u67E5\u6DF1\u5EA6", value: diagnosisMode, onChange: (e46) => setDiagnosisMode(e46.target.value), disabled: Boolean(busy2) || checking, children: [
-                /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("option", { value: "quick", children: "\u65B9\u6848\u4E0E\u9879\u76EE\u6587\u4EF6" }),
-                /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("option", { value: "engine", children: "\u52A0\u505A Godot \u68C0\u67E5" })
-              ] }),
-              report && !report.stale && /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("button", { className: "gw-secondary", disabled: Boolean(busy2) || checking, onClick: () => runDiagnosis(), children: [
-                /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(m, { size: 18 }),
-                api.requestDiagnosis ? "\u91CD\u65B0\u8BCA\u65AD" : "\u91CD\u65B0\u68C0\u67E5"
-              ] })
-            ] })
-          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("header", { className: "gw-overview-heading", children: /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("h1", { children: "\u9879\u76EE\u8BCA\u65AD" }) }),
           !report ? /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("section", { className: "gw-diagnosis-priorities", children: [
-            /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("h2", { children: "\u8FD8\u6CA1\u6709\u8BCA\u65AD\u8BB0\u5F55" }),
-            /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("p", { children: api.requestDiagnosis ? "\u5F00\u59CB\u540E\u4F1A\u6838\u5BF9\u5F53\u524D\u65B9\u6848\u548C\u5DE5\u7A0B\uFF0CAI \u5EFA\u8BAE\u5728\u672C\u9879\u76EE\u7684\u72EC\u7ACB\u8BCA\u65AD\u5BF9\u8BDD\u5904\u7406\u3002" : "\u53EF\u4EE5\u5148\u68C0\u67E5\u65B9\u6848\u51C6\u5907\u60C5\u51B5\u548C\u5DE5\u7A0B\u6587\u4EF6\u3002" }),
+            /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("h2", { children: "\u68C0\u67E5\u73A9\u6CD5\u3001\u8303\u56F4\u548C\u5DE5\u7A0B" }),
+            api.requestDiagnosis && /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("p", { children: "AI \u5EFA\u8BAE\u4F1A\u53D1\u5230\u672C\u9879\u76EE\u7684\u8BCA\u65AD\u5BF9\u8BDD\u3002" }),
             /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("button", { className: "gw-primary", disabled: Boolean(busy2) || checking, onClick: () => runDiagnosis(), children: "\u5F00\u59CB\u8BCA\u65AD" })
           ] }) : /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)(import_jsx_runtime26.Fragment, { children: [
             /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(
@@ -6557,7 +6496,7 @@ function App({ api = defaultApi, conversation = null, agentState = null, host = 
             ),
             !report.stale && report.aiReview.status !== "completed" && api.requestDiagnosis && /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("div", { className: "gw-diagnosis-review", children: [
               waitingForReview ? /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)(import_jsx_runtime26.Fragment, { children: [
-                /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("p", { role: "status", className: "gw-small gw-muted", children: finishedDiagnosis?.status === "failed" ? "AI \u8BC4\u4F30\u672A\u5B8C\u6210\u3002\u53EF\u5728\u8BCA\u65AD\u5BF9\u8BDD\u67E5\u770B\u539F\u56E0\u3002" : finishedDiagnosis?.status === "completed" ? "\u8BCA\u65AD\u5BF9\u8BDD\u5DF2\u7ED3\u675F\u3002\u53EF\u6253\u5F00\u67E5\u770B\u56DE\u590D\u3002" : "\u5DF2\u53D1\u9001\u3002\u53EF\u5728\u8BCA\u65AD\u5BF9\u8BDD\u67E5\u770B\u56DE\u590D\u6216\u5931\u8D25\u539F\u56E0\u3002" }),
+                /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("p", { role: "status", className: "gw-small gw-muted", children: finishedDiagnosis?.status === "failed" ? "AI \u8BC4\u4F30\u672A\u5B8C\u6210\u3002" : finishedDiagnosis?.status === "completed" ? "AI \u5DF2\u56DE\u590D\u3002" : "AI \u6B63\u5728\u8BCA\u65AD\u3002" }),
                 sessionNavigation?.open && diagnosisState.sessionId && /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("button", { className: "gw-secondary", disabled: Boolean(busy2), onClick: () => perform("\u6253\u5F00\u8BCA\u65AD\u5BF9\u8BDD", async () => {
                   await sessionNavigation.open(status.projectRoot, diagnosisState.sessionId);
                   setPage("conversation");
@@ -6572,16 +6511,27 @@ function App({ api = defaultApi, conversation = null, agentState = null, host = 
                 " \xB7 ",
                 report.origin?.type === "automatic" ? "\u4EFB\u52A1\u63D0\u4EA4\u540E\u81EA\u52A8\u68C0\u67E5" : "\u624B\u52A8\u68C0\u67E5"
               ] }),
+              /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("p", { className: "gw-small", children: [
+                report.stale ? "\u4E0A\u6B21 Godot \u68C0\u67E5" : "Godot \u68C0\u67E5",
+                "\uFF1A",
+                engineImportStatus(report.coverage?.engineImport).label,
+                "\u3002\u6E38\u620F\u4F53\u9A8C\u8BF7\u5B9E\u9645\u8BD5\u73A9\u3002"
+              ] }),
               report.aiReview.summary && /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("p", { children: report.aiReview.summary }),
               /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(ExportReadiness, { value: report.exportReadiness })
-            ] }),
-            /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("div", { className: "gw-verification-note", children: [
-              report.stale ? "\u4E0A\u6B21 Godot \u68C0\u67E5" : "Godot \u68C0\u67E5",
-              "\uFF1A",
-              engineImportStatus(report.coverage?.engineImport).label,
-              report.stale ? "\uFF08\u9700\u91CD\u68C0\uFF09" : "",
-              /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("br", {}),
-              "\u6E38\u620F\u4F53\u9A8C\u4ECD\u9700\u5B9E\u9645\u8BD5\u73A9\u3002"
+            ] })
+          ] }),
+          /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("details", { className: "gw-diagnosis-details", children: [
+            /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("summary", { children: "\u8BCA\u65AD\u8BBE\u7F6E" }),
+            /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("div", { className: "gw-diagnosis-actions", children: [
+              /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("label", { children: [
+                "\u68C0\u67E5\u8303\u56F4 ",
+                /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("select", { "aria-label": "\u68C0\u67E5\u6DF1\u5EA6", value: diagnosisMode, onChange: (e46) => setDiagnosisMode(e46.target.value), disabled: Boolean(busy2) || checking, children: [
+                  /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("option", { value: "quick", children: "\u65B9\u6848\u4E0E\u9879\u76EE\u6587\u4EF6" }),
+                  /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("option", { value: "engine", children: "\u52A0\u505A Godot \u68C0\u67E5" })
+                ] })
+              ] }),
+              report && !report.stale && /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("button", { className: "gw-secondary", disabled: Boolean(busy2) || checking, onClick: () => runDiagnosis(), children: api.requestDiagnosis ? "\u91CD\u65B0\u8BCA\u65AD" : "\u91CD\u65B0\u68C0\u67E5" })
             ] })
           ] }),
           /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("details", { className: "gw-diagnosis-details", children: [
@@ -6603,7 +6553,7 @@ function App({ api = defaultApi, conversation = null, agentState = null, host = 
         ] })
       ] }) })
     ] }),
-    /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("aside", { className: "gw-inspector", children: /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(DevelopmentChecklist, { status, action: checklistAction(), muted: notices.muted, onToggleSound: notices.toggleSound }) }),
+    /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("aside", { className: "gw-inspector", children: /* @__PURE__ */ (0, import_jsx_runtime26.jsx)(DevelopmentChecklist, { status, action: checklistAction(), showTasks: page === "conversation", muted: notices.muted, onToggleSound: notices.toggleSound }) }),
     draftOpen && /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)(Modal, { title: planDraft ? "\u5F85\u53D1\u9001\u5236\u4F5C\u8BF7\u6C42" : clarificationDraft ? "\u5F85\u53D1\u9001\u8BBE\u8BA1\u95EE\u9898" : knowledgeDraft ? "\u5728\u5F00\u53D1\u5BF9\u8BDD\u4E2D\u8BA8\u8BBA" : "\u5F85\u53D1\u9001\u5EFA\u8BAE", onClose: hideDraft, children: [
       /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("p", { children: planDraft ? "\u7EE7\u7EED\u5DF2\u786E\u8BA4\u8BA1\u5212\u4E2D\u7684\u4E00\u5C0F\u6B65\uFF1A\u6838\u5BF9\u5DF2\u6709\u6539\u52A8\uFF0C\u518D\u5236\u4F5C\u5E76\u68C0\u67E5\u7ED3\u679C\u3002\u9700\u8981\u4F60\u51B3\u5B9A\u7684\u95EE\u9898\u4F1A\u5148\u8BE2\u95EE\u3002" : clarificationDraft ? "\u8BF7 AI \u63A5\u7740\u5DF2\u8C08\u597D\u7684\u5185\u5BB9\uFF0C\u53EA\u95EE\u5F53\u524D\u8FD8\u9700\u8981\u4F60\u51B3\u5B9A\u7684\u4E8B\u3002" : knowledgeDraft ? "\u53D1\u9001\u540E\uFF0CAI \u4F1A\u7ED3\u5408\u5F53\u524D\u6E38\u620F\u8BC4\u4F30\u8FD9\u6761\u505A\u6CD5\u3002\u8349\u7A3F\u4FDD\u7559\u5728\u672C\u9879\u76EE\u3002" : diagnosisDraft ? "\u53D1\u9001\u65F6\u4F1A\u91CD\u65B0\u6838\u5BF9\u8BCA\u65AD\u3002\u5EFA\u8BAE\u4F1A\u8FDB\u5165\u672C\u9879\u76EE\u7684\u5F00\u53D1\u5BF9\u8BDD\u3002" : "\u8FD9\u6BB5\u5EFA\u8BAE\u5C1A\u672A\u53D1\u9001\u3002\u5173\u95ED\u540E\u4FDD\u7559\u5728\u672C\u673A\u672C\u9879\u76EE\uFF0C\u53D1\u9001\u524D\u8BF7\u6838\u5BF9\u5185\u5BB9\u662F\u5426\u4ECD\u9002\u7528\u3002" }),
       planDraft || clarificationDraft || diagnosisDraft ? /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("details", { children: [
@@ -6718,7 +6668,7 @@ async function stopTaskSession({ task, projectRoot, currentSessionId, sessions, 
 
 // src/styles.css
 var styles_default = `*{box-sizing:border-box}html,body,#root{margin:0;width:100%;height:100%}body{background:#15151b;color:#efedf5;font-family:"Microsoft YaHei UI","Microsoft YaHei",system-ui,sans-serif;font-size:16px;-webkit-font-smoothing:antialiased}button,input,textarea{font:inherit}button{cursor:pointer;color:inherit;transition:background .15s,border-color .15s}button:disabled{cursor:not-allowed;opacity:.42}button,a,input,textarea{outline-offset:4px}button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid #d0eb47}svg{flex-shrink:0}a{color:#d0eb47;text-decoration:none}a:hover{text-decoration:underline}h1,h2,h3,p{margin:0}h1{font-size:26px;line-height:1.4;letter-spacing:.02em}h1 span{color:#afa9bf;margin:0 6px}h2{font-size:22px}h3{font-size:18px}p{line-height:1.75}pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;line-height:1.65}button:hover:not(:disabled){filter:brightness(1.12)}\r
-.gw-shell{--accent:#d0eb47;--muted:#aaa6b8;display:grid;grid-template-columns:240px minmax(400px,1fr) 380px;grid-template-rows:56px minmax(0,1fr);height:100dvh;background:#15151b;color:#efedf5}.gw-topbar{grid-column:1/-1;display:flex;align-items:center;border-bottom:1px solid #31303c;padding:0 24px;gap:24px;background:#111116}.gw-brand{display:flex;align-items:center;gap:16px;white-space:nowrap;font-size:23px}.gw-brand svg{color:var(--accent)}.gw-subtitle{padding-left:24px;border-left:1px solid #3c394a;color:#c8c4d3;font-size:16px}.gw-top-actions{margin-left:auto;display:flex;gap:16px}.gw-icon-button{display:inline-flex;align-items:center;justify-content:center;background:transparent;border:0;padding:5px;color:#bdb8cc;border-radius:6px}.gw-sidebar{border-right:1px solid #31303c;display:flex;flex-direction:column;padding:20px 12px;background:#191920;min-height:0}.gw-project{display:flex;align-items:center;gap:12px;margin:0 8px 16px;padding:8px 0 20px;background:transparent;border:0;border-bottom:1px solid #353340;min-width:0;text-align:left}.gw-project strong{font-size:20px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.gw-project svg:first-child{color:var(--accent)}.gw-project svg:last-child{margin-left:auto}.gw-nav-items{display:flex;flex-direction:column;gap:8px}.gw-nav-items button{display:flex;gap:16px;align-items:center;border:0;border-left:3px solid transparent;background:transparent;padding:13px 14px;border-radius:10px;font-size:18px;text-align:left;white-space:nowrap}.gw-nav-items button.active{border-left-color:var(--accent);background:#302a40}.gw-sidebar-foot{margin-top:auto;color:#a5ac99;font-size:12px;display:flex;align-items:center;gap:8px;padding:18px 10px 0}.gw-live-dot{width:6px;height:6px;border-radius:50%;background:#aab77d}.gw-main{display:flex;flex-direction:column;min-height:0;min-width:0;position:relative}.gw-stepper{display:flex;flex-shrink:0;align-items:start;padding:22px 64px 18px;height:92px}.gw-stepper button{position:relative;flex:1;display:flex;align-items:center;flex-direction:column;gap:7px;background:none;border:0;font-size:16px;color:#aaa3b9;padding:0}.gw-stepper button:not(:last-child):after{content:"";position:absolute;height:2px;background:#666b61;top:11px;left:calc(50% + 15px);width:calc(100% - 30px)}.gw-stepper button.complete:not(:last-child):after{background:var(--accent)}.gw-stepper button>span{height:24px;width:24px;display:flex;align-items:center;justify-content:center}.gw-stepper button.complete>span{border-radius:50%;background:var(--accent);color:#19220b}.gw-stepper button.current{color:var(--accent)}.gw-stepper button.current>span{border-radius:50%;box-shadow:0 0 0 4px #cce74410}.gw-stepper b{font-weight:500}.gw-main-scroll{flex:1;min-height:0;overflow:auto;padding:8px 28px 28px;scrollbar-color:#4b5143 transparent;scrollbar-width:thin}.gw-main-scroll>h1{margin:0 0 26px}.gw-message{display:flex;align-items:flex-start;gap:16px;margin-bottom:24px}.gw-avatar{width:42px;height:42px;display:flex;align-items:center;justify-content:center;flex-shrink:0;border-radius:50%;background:#8c8b7b;color:#fff;margin-top:2px}.gw-message.assistant .gw-avatar{background:var(--accent);color:#1c2713}.gw-byline{font-size:16px;font-weight:600;line-height:24px;margin-bottom:7px}.gw-byline span{color:var(--muted);font-weight:400;font-size:13px;margin-left:16px}.gw-user-bubble{background:#3d4038;padding:8px 20px;border-radius:14px;font-size:18px;line-height:1.7}.gw-message-content{min-width:0;flex:1}.gw-plan-bubble{padding:16px 22px 20px;background:#23222c;border-radius:14px;font-size:17px;line-height:1.7}.gw-plan-section{border-left:4px solid var(--accent);padding-left:14px;margin:14px 0}.gw-plan-section h3{margin-bottom:3px;font-size:18px}.gw-loop{color:var(--accent);font-size:21px;font-weight:700}.gw-plan-section ol{margin:5px 0 0;padding:0;list-style:none}.gw-plan-section li{display:flex;gap:9px;align-items:baseline;margin:3px 0;line-height:1.65}.gw-number{display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:var(--accent);color:#26300c;width:21px;height:21px;flex-shrink:0;font-size:13px;font-weight:700}.gw-excluded{font-size:15px;color:#bdc2b4;margin:4px 0 16px}.gw-document{width:100%;padding:0;background:#34382f;border:1px solid #53594a;border-radius:10px;text-align:left;overflow:hidden}.gw-document-heading{display:flex;gap:16px;align-items:center;padding:12px 18px;border-bottom:1px solid #565d4b}.gw-document-heading strong{font-size:18px}.gw-document-heading span{display:block;color:#b6bcae;font-size:14px}.gw-document-heading>svg:last-child{margin-left:auto}.gw-milestones{padding:10px 20px;display:flex;flex-direction:column;gap:8px;line-height:1.4}.gw-milestones>div{display:flex;gap:18px;align-items:start}.gw-milestones b{width:26px;height:26px;background:#e1e3d7;color:#20251b;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}.gw-milestones strong{font-size:16px}.gw-milestones span{display:block;font-size:14px;color:#c3c9b8;line-height:1.65}.gw-composer{display:flex;flex-shrink:0;gap:14px;margin:0 20px 20px;padding:8px;border:1px solid #737b66;border-radius:12px;background:#24222e;align-items:end}.gw-composer textarea{resize:none;flex:1;min-width:0;max-height:160px;padding:9px 13px;border:1px solid #4f5745;border-radius:8px;color:#edf1e5;background:#363c2e;line-height:1.5}.gw-composer textarea::placeholder{color:#b1b6a7}.gw-primary,.gw-secondary{border-radius:9px;display:inline-flex;align-items:center;justify-content:center;gap:12px;min-height:44px;padding:10px 18px;font-size:16px;line-height:1.5;font-weight:600}.gw-primary{background:var(--accent,#d0eb47);color:#1a210c;border:1px solid #d9f16b}.gw-secondary{background:transparent;color:#e3e7da;border:1px solid #858d79;font-weight:400}.gw-send{min-width:44px;min-height:44px;padding:8px}.gw-inspector{border-left:1px solid #31303c;padding:38px 26px 24px;overflow:auto;min-height:0}.gw-inspector>h2{font-size:25px;margin-bottom:20px}.gw-checklist{border-top:1px solid #4a5140;margin-bottom:30px}.gw-check-row{display:flex;align-items:center;gap:13px;border-bottom:1px solid #3f4637;padding:19px 0}.gw-check-row>div:nth-child(2){flex:1;min-width:0}.gw-check-row strong{font-size:17px;display:block}.gw-check-row span{display:block;font-size:13px;color:#b4bbaa;margin-top:4px;line-height:1.6}.gw-check-icon{display:flex;align-items:center;justify-content:center;border-radius:50%;background:#272d22;width:42px;height:42px;flex-shrink:0}.gw-full{width:100%;margin-bottom:14px;min-height:50px;font-size:18px}.gw-inspector-secondary{margin-top:32px;padding-top:24px;border-top:1px solid #383e32}.gw-inspector-secondary p{margin:4px 0 12px}.gw-questions{margin-top:20px}.gw-questions p{font-size:14px;color:#d0d7c5;margin:12px 0}.gw-accent{color:var(--accent)}.gw-muted{color:var(--muted,#aaa6b8)}.gw-small{font-size:13px}.gw-banner{display:flex;align-items:center;gap:10px;padding:10px 16px;margin:0 24px 10px;border-radius:8px;background:#303c21;color:#e1edcb;font-size:14px}.gw-banner>span{flex:1}.gw-banner.error{background:#472f27;color:#f1c5b7}.gw-spin{animation:gw-rotate 1s linear infinite}@keyframes gw-rotate{to{transform:rotate(360deg)}}.gw-empty{text-align:center;padding:50px 20px;color:#b6bfa9;line-height:1.8}.gw-empty h1,.gw-empty h2{color:#e6eddb;margin:12px 0}.gw-empty p{margin-bottom:20px}.gw-section-page>h1{margin-bottom:14px}.gw-overview-heading{display:flex;justify-content:space-between;align-items:center;gap:18px;margin:22px 0}.gw-overview-heading>span{font-size:14px;color:#abb99a}.gw-task{display:flex;align-items:start;justify-content:space-between;gap:14px;padding:22px 0;border-top:1px solid #424a38}.gw-task p{font-size:15px;margin-top:8px}.gw-task.old{opacity:.6}.gw-task-status{display:block;color:#c1c9b4;font-size:12px;margin-bottom:6px}.gw-task-status.running{color:var(--accent)}.gw-task-status.accepted{color:#b8dc95}.gw-task details{font-size:14px;margin-top:8px}.gw-search{display:flex;align-items:center;gap:12px;border:1px solid #505d40;padding:6px 7px 6px 14px;border-radius:9px;margin:24px 0}.gw-search input{min-width:0;flex:1;background:none;border:0;color:inherit;line-height:44px}.gw-coverage{display:flex;flex-wrap:wrap;gap:10px 25px;margin-bottom:16px;color:#b9c6a8;font-size:14px}.gw-coverage b{margin-left:5px;color:#e0edcd}.gw-knowledge-results article{padding:25px 0;border-bottom:1px solid #3b364b}.gw-knowledge-results p{margin:13px 0}.gw-knowledge-results a{font-size:13px;display:inline-flex;gap:7px;align-items:center;margin-top:8px}.gw-eyebrow{font-size:13px;color:#c0d58c;margin-bottom:8px}.gw-issue{padding:23px 0;border-bottom:1px solid #3b364b}.gw-issue h2{font-size:20px}.gw-issue p{margin:10px 0}.gw-issue details{font-size:13px;color:#b7c0ab;margin:16px 0}.gw-issue pre{font-size:12px}.gw-diagnosis-summary{display:flex;flex-direction:column;gap:9px;margin:24px 0;padding:18px;background:#2b3323;border-radius:8px}.gw-diagnosis-summary span{color:#b6c3a6;font-size:13px}.gw-verification-note{font-size:13px;line-height:1.8;color:#b8c1ac;padding:20px 0}.gw-modal{--accent:#d0eb47;background:#23291d;color:#edf1e6;border:1px solid #647150;border-radius:14px;padding:26px;width:min(560px,calc(100vw - 32px));max-height:85dvh;overflow:auto;box-shadow:0 20px 100px #0008;font-family:"Microsoft YaHei UI",system-ui,sans-serif}.gw-modal.wide{width:min(900px,calc(100vw - 32px))}.gw-modal::backdrop{background:#000b}.gw-modal>header{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:20px}.gw-modal p{margin:14px 0}.gw-modal label{display:flex;flex-direction:column;gap:8px;font-size:14px}.gw-modal textarea{width:100%;resize:vertical;border:1px solid #4a445d;border-radius:7px;padding:9px;background:#18171f;color:#e9e5f2;line-height:1.65}.gw-modal footer{display:flex;justify-content:end;gap:12px;margin-top:24px}.gw-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:24px}.gw-form-grid .wide-field{grid-column:1/-1}.gw-tabs{display:flex;gap:12px}.gw-tabs button{background:none;border:0;border-bottom:2px solid transparent;padding:10px;color:#bcc9ac}.gw-tabs button.active{border-color:var(--accent);color:var(--accent)}.gw-document-text{font-size:14px;margin-top:22px}.gw-path{font-size:13px;line-height:1.7;overflow-wrap:anywhere;background:#182013;padding:12px;border-radius:6px}.gw-help{padding-left:24px;line-height:2.1}.gw-help li{margin:12px 0}\r
+.gw-shell{--accent:#d0eb47;--muted:#aaa6b8;display:grid;grid-template-columns:240px minmax(400px,1fr) 380px;grid-template-rows:56px minmax(0,1fr);height:100dvh;background:#15151b;color:#efedf5}.gw-topbar{grid-column:1/-1;display:flex;align-items:center;border-bottom:1px solid #31303c;padding:0 24px;gap:24px;background:#111116}.gw-brand{display:flex;align-items:center;gap:16px;white-space:nowrap;font-size:23px}.gw-brand svg{color:var(--accent)}.gw-subtitle{padding-left:24px;border-left:1px solid #3c394a;color:#c8c4d3;font-size:16px}.gw-top-actions{margin-left:auto;display:flex;gap:16px}.gw-icon-button{display:inline-flex;align-items:center;justify-content:center;background:transparent;border:0;padding:5px;color:#bdb8cc;border-radius:6px}.gw-sidebar{border-right:1px solid #31303c;display:flex;flex-direction:column;padding:20px 12px;background:#191920;min-height:0}.gw-project{display:flex;align-items:center;gap:12px;margin:0 8px 16px;padding:8px 0 20px;background:transparent;border:0;border-bottom:1px solid #353340;min-width:0;text-align:left}.gw-project strong{font-size:20px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.gw-project svg:first-child{color:var(--accent)}.gw-project svg:last-child{margin-left:auto}.gw-nav-items{display:flex;flex-direction:column;gap:8px}.gw-nav-items button{display:flex;gap:16px;align-items:center;border:0;border-left:3px solid transparent;background:transparent;padding:13px 14px;border-radius:10px;font-size:18px;text-align:left;white-space:nowrap}.gw-nav-items button.active{border-left-color:var(--accent);background:#302a40}.gw-sidebar-foot{margin-top:auto;color:#a5ac99;font-size:12px;display:flex;align-items:center;gap:8px;padding:18px 10px 0}.gw-live-dot{width:6px;height:6px;border-radius:50%;background:#aab77d}.gw-main{display:flex;flex-direction:column;min-height:0;min-width:0;position:relative}.gw-stepper{display:flex;flex-shrink:0;align-items:start;padding:22px 64px 18px;height:92px}.gw-stepper > li{position:relative;flex:1;display:flex;align-items:center;flex-direction:column;gap:7px;background:none;border:0;font-size:16px;color:#aaa3b9;padding:0}.gw-stepper > li:not(:last-child):after{content:"";position:absolute;height:2px;background:#666b61;top:11px;left:calc(50% + 15px);width:calc(100% - 30px)}.gw-stepper > li.complete:not(:last-child):after{background:var(--accent)}.gw-stepper > li>span{height:24px;width:24px;display:flex;align-items:center;justify-content:center}.gw-stepper > li.complete>span{border-radius:50%;background:var(--accent);color:#19220b}.gw-stepper > li.current{color:var(--accent)}.gw-stepper > li.current>span{border-radius:50%;box-shadow:0 0 0 4px #cce74410}.gw-stepper b{font-weight:500}.gw-main-scroll{flex:1;min-height:0;overflow:auto;padding:8px 28px 28px;scrollbar-color:#4b5143 transparent;scrollbar-width:thin}.gw-main-scroll>h1{margin:0 0 26px}.gw-message{display:flex;align-items:flex-start;gap:16px;margin-bottom:24px}.gw-avatar{width:42px;height:42px;display:flex;align-items:center;justify-content:center;flex-shrink:0;border-radius:50%;background:#8c8b7b;color:#fff;margin-top:2px}.gw-message.assistant .gw-avatar{background:var(--accent);color:#1c2713}.gw-byline{font-size:16px;font-weight:600;line-height:24px;margin-bottom:7px}.gw-byline span{color:var(--muted);font-weight:400;font-size:13px;margin-left:16px}.gw-user-bubble{background:#3d4038;padding:8px 20px;border-radius:14px;font-size:18px;line-height:1.7}.gw-message-content{min-width:0;flex:1}.gw-plan-bubble{padding:16px 22px 20px;background:#23222c;border-radius:14px;font-size:17px;line-height:1.7}.gw-plan-section{border-left:4px solid var(--accent);padding-left:14px;margin:14px 0}.gw-plan-section h3{margin-bottom:3px;font-size:18px}.gw-loop{color:var(--accent);font-size:21px;font-weight:700}.gw-plan-section ol{margin:5px 0 0;padding:0;list-style:none}.gw-plan-section li{display:flex;gap:9px;align-items:baseline;margin:3px 0;line-height:1.65}.gw-number{display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:var(--accent);color:#26300c;width:21px;height:21px;flex-shrink:0;font-size:13px;font-weight:700}.gw-excluded{font-size:15px;color:#bdc2b4;margin:4px 0 16px}.gw-document{width:100%;padding:0;background:#34382f;border:1px solid #53594a;border-radius:10px;text-align:left;overflow:hidden}.gw-document-heading{display:flex;gap:16px;align-items:center;padding:12px 18px;border-bottom:1px solid #565d4b}.gw-document-heading strong{font-size:18px}.gw-document-heading span{display:block;color:#b6bcae;font-size:14px}.gw-document-heading>svg:last-child{margin-left:auto}.gw-milestones{padding:10px 20px;display:flex;flex-direction:column;gap:8px;line-height:1.4}.gw-milestones>div{display:flex;gap:18px;align-items:start}.gw-milestones b{width:26px;height:26px;background:#e1e3d7;color:#20251b;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}.gw-milestones strong{font-size:16px}.gw-milestones span{display:block;font-size:14px;color:#c3c9b8;line-height:1.65}.gw-composer{display:flex;flex-shrink:0;gap:14px;margin:0 20px 20px;padding:8px;border:1px solid #737b66;border-radius:12px;background:#24222e;align-items:end}.gw-composer textarea{resize:none;flex:1;min-width:0;max-height:160px;padding:9px 13px;border:1px solid #4f5745;border-radius:8px;color:#edf1e5;background:#363c2e;line-height:1.5}.gw-composer textarea::placeholder{color:#b1b6a7}.gw-primary,.gw-secondary{border-radius:9px;display:inline-flex;align-items:center;justify-content:center;gap:12px;min-height:44px;padding:10px 18px;font-size:16px;line-height:1.5;font-weight:600}.gw-primary{background:var(--accent,#d0eb47);color:#1a210c;border:1px solid #d9f16b}.gw-secondary{background:transparent;color:#e3e7da;border:1px solid #858d79;font-weight:400}.gw-send{min-width:44px;min-height:44px;padding:8px}.gw-inspector{border-left:1px solid #31303c;padding:38px 26px 24px;overflow:auto;min-height:0}.gw-inspector>h2{font-size:25px;margin-bottom:20px}.gw-checklist{border-top:1px solid #4a5140;margin-bottom:30px}.gw-check-row{display:flex;align-items:center;gap:13px;border-bottom:1px solid #3f4637;padding:19px 0}.gw-check-row>div:nth-child(2){flex:1;min-width:0}.gw-check-row strong{font-size:17px;display:block}.gw-check-row span{display:block;font-size:13px;color:#b4bbaa;margin-top:4px;line-height:1.6}.gw-check-icon{display:flex;align-items:center;justify-content:center;border-radius:50%;background:#272d22;width:42px;height:42px;flex-shrink:0}.gw-full{width:100%;margin-bottom:14px;min-height:50px;font-size:18px}.gw-inspector-secondary{margin-top:32px;padding-top:24px;border-top:1px solid #383e32}.gw-inspector-secondary p{margin:4px 0 12px}.gw-questions{margin-top:20px}.gw-questions p{font-size:14px;color:#d0d7c5;margin:12px 0}.gw-accent{color:var(--accent)}.gw-muted{color:var(--muted,#aaa6b8)}.gw-small{font-size:13px}.gw-banner{display:flex;align-items:center;gap:10px;padding:10px 16px;margin:0 24px 10px;border-radius:8px;background:#303c21;color:#e1edcb;font-size:14px}.gw-banner>span{flex:1}.gw-banner.error{background:#472f27;color:#f1c5b7}.gw-spin{animation:gw-rotate 1s linear infinite}@keyframes gw-rotate{to{transform:rotate(360deg)}}.gw-empty{text-align:center;padding:50px 20px;color:#b6bfa9;line-height:1.8}.gw-empty h1,.gw-empty h2{color:#e6eddb;margin:12px 0}.gw-empty p{margin-bottom:20px}.gw-section-page>h1{margin-bottom:14px}.gw-overview-heading{display:flex;justify-content:space-between;align-items:center;gap:18px;margin:22px 0}.gw-overview-heading>span{font-size:14px;color:#abb99a}.gw-task{display:flex;align-items:start;justify-content:space-between;gap:14px;padding:22px 0;border-top:1px solid #424a38}.gw-task p{font-size:15px;margin-top:8px}.gw-task.old{opacity:.6}.gw-task-status{display:block;color:#c1c9b4;font-size:12px;margin-bottom:6px}.gw-task-status.running{color:var(--accent)}.gw-task-status.accepted{color:#b8dc95}.gw-task details{font-size:14px;margin-top:8px}.gw-search{display:flex;align-items:center;gap:12px;border:1px solid #505d40;padding:6px 7px 6px 14px;border-radius:9px;margin:24px 0}.gw-search input{min-width:0;flex:1;background:none;border:0;color:inherit;line-height:44px}.gw-coverage{display:flex;flex-wrap:wrap;gap:10px 25px;margin-bottom:16px;color:#b9c6a8;font-size:14px}.gw-coverage b{margin-left:5px;color:#e0edcd}.gw-knowledge-results article{padding:25px 0;border-bottom:1px solid #3b364b}.gw-knowledge-results p{margin:13px 0}.gw-knowledge-results a{font-size:13px;display:inline-flex;gap:7px;align-items:center;margin-top:8px}.gw-eyebrow{font-size:13px;color:#c0d58c;margin-bottom:8px}.gw-issue{padding:23px 0;border-bottom:1px solid #3b364b}.gw-issue h2{font-size:20px}.gw-issue p{margin:10px 0}.gw-issue details{font-size:13px;color:#b7c0ab;margin:16px 0}.gw-issue pre{font-size:12px}.gw-diagnosis-summary{display:flex;flex-direction:column;gap:9px;margin:24px 0;padding:18px;background:#2b3323;border-radius:8px}.gw-diagnosis-summary span{color:#b6c3a6;font-size:13px}.gw-verification-note{font-size:13px;line-height:1.8;color:#b8c1ac;padding:20px 0}.gw-modal{--accent:#d0eb47;background:#23291d;color:#edf1e6;border:1px solid #647150;border-radius:14px;padding:26px;width:min(560px,calc(100vw - 32px));max-height:85dvh;overflow:auto;box-shadow:0 20px 100px #0008;font-family:"Microsoft YaHei UI",system-ui,sans-serif}.gw-modal.wide{width:min(900px,calc(100vw - 32px))}.gw-modal::backdrop{background:#000b}.gw-modal>header{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:20px}.gw-modal p{margin:14px 0}.gw-modal label{display:flex;flex-direction:column;gap:8px;font-size:14px}.gw-modal textarea{width:100%;resize:vertical;border:1px solid #4a445d;border-radius:7px;padding:9px;background:#18171f;color:#e9e5f2;line-height:1.65}.gw-modal footer{display:flex;justify-content:end;gap:12px;margin-top:24px}.gw-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:24px}.gw-form-grid .wide-field{grid-column:1/-1}.gw-tabs{display:flex;gap:12px}.gw-tabs button{background:none;border:0;border-bottom:2px solid transparent;padding:10px;color:#bcc9ac}.gw-tabs button.active{border-color:var(--accent);color:var(--accent)}.gw-document-text{font-size:14px;margin-top:22px}.gw-path{font-size:13px;line-height:1.7;overflow-wrap:anywhere;background:#182013;padding:12px;border-radius:6px}.gw-help{padding-left:24px;line-height:2.1}.gw-help li{margin:12px 0}\r
 @media(min-width:1600px){.gw-shell{grid-template-columns:250px minmax(500px,1fr) 380px}.gw-main-scroll{padding-left:40px;padding-right:40px}.gw-plan-bubble{font-size:18px}}@media(max-width:1190px){.gw-shell{grid-template-columns:190px minmax(380px,1fr) 300px}.gw-brand{font-size:20px}.gw-subtitle{font-size:13px}.gw-inspector{padding:30px 18px}.gw-main-scroll{padding:8px 20px 24px}.gw-plan-bubble{padding:16px;font-size:15px}.gw-plan-section h3{font-size:16px}.gw-check-row{gap:9px}.gw-check-icon{width:34px;height:34px}.gw-check-row strong{font-size:15px}.gw-nav-items button{font-size:16px;gap:10px}.gw-project strong{font-size:17px}}@media(max-width:980px){.gw-shell{grid-template-columns:72px minmax(360px,1fr) 280px}.gw-nav-items button{justify-content:center;padding:14px 0}.gw-nav-items span,.gw-project strong,.gw-project>svg:last-child,.gw-sidebar-foot{display:none}.gw-project{margin:0 0 16px;justify-content:center}.gw-topbar{padding:0 18px}.gw-subtitle{display:none}.gw-stepper{padding-left:34px;padding-right:34px}.gw-message{gap:10px}.gw-avatar{width:32px;height:32px}.gw-avatar svg{width:22px}.gw-plan-bubble{padding:14px}.gw-loop{font-size:18px}}@media(max-width:740px){.gw-shell{grid-template-columns:58px minmax(0,1fr);grid-template-rows:54px minmax(0,1fr) auto}.gw-sidebar{grid-row:2/4;padding:16px 7px}.gw-inspector{grid-column:2;grid-row:3;max-height:230px;border-left:0;border-top:1px solid #414b34;padding:14px 18px;display:flex;flex-wrap:wrap;gap:8px}.gw-inspector>h2{font-size:16px;margin:0;width:100%}.gw-checklist,.gw-questions,.gw-inspector-secondary>p{display:none}.gw-inspector .gw-full{font-size:14px;min-height:40px;margin:0;flex:1;white-space:nowrap;padding:7px 12px}.gw-inspector-secondary{margin:0;padding:0;border:0}.gw-main-scroll{padding:4px 14px 20px}h1{font-size:20px}.gw-main-scroll>h1{margin-bottom:20px}.gw-stepper{height:78px;padding:16px 18px 10px}.gw-message.user{margin-bottom:18px}.gw-avatar{display:none}.gw-byline{font-size:14px}.gw-user-bubble{font-size:15px}.gw-plan-bubble{font-size:14px}.gw-plan-section li{gap:7px}.gw-document-heading{padding:12px}.gw-document-heading span{font-size:12px}.gw-document-heading strong{font-size:15px}.gw-milestones{padding:12px;gap:12px}.gw-milestones>div{gap:10px}.gw-milestones span{font-size:12px}.gw-composer{margin:0 10px 10px;gap:6px}.gw-composer textarea{font-size:14px}.gw-topbar{padding:0 14px}.gw-brand{gap:10px;font-size:19px}.gw-top-actions{gap:8px}.gw-form-grid{grid-template-columns:1fr}.gw-banner{margin:0 12px 8px;padding:8px}.gw-search{gap:6px;padding-left:8px}.gw-search button{padding:8px 12px}.gw-overview-heading{align-items:start}.gw-overview-heading>h1{flex:1}.gw-overview-heading .gw-secondary{font-size:13px;padding:6px 9px}.gw-task{flex-direction:column}.gw-modal{padding:20px}}@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}\r
 \r
 .gw-document-text h2{margin:22px 0 12px}.gw-document-text h3{margin:26px 0 10px}.gw-document-text ul,.gw-document-text ol{padding-left:24px;line-height:1.9}.gw-document-text li{margin:6px 0}.gw-document-text .gw-path{display:block;margin-top:10px}.gw-document-text p{white-space:pre-wrap}\r
@@ -6788,8 +6738,8 @@ var styles_default = `*{box-sizing:border-box}html,body,#root{margin:0;width:100
 .gw-shell{--secondary:#c7b5ee;--secondary-soft:#30283f;--border:#35313f;--muted:#aaa6b8;color-scheme:dark}\r
 .gw-nav-items button.active{border-left-color:var(--secondary);background:var(--secondary-soft);color:#e6dcf7}\r
 .gw-nav-items button.active svg{color:var(--secondary)}\r
-.gw-stepper button.current{color:var(--secondary)}\r
-.gw-stepper button.current>span{box-shadow:0 0 0 4px #c7b5ee18}\r
+.gw-stepper > li.current{color:var(--secondary)}\r
+.gw-stepper > li.current>span{box-shadow:0 0 0 4px #c7b5ee18}\r
 .gw-shell :is(button,a,input,textarea,select,summary):focus-visible{outline:2px solid var(--secondary);outline-offset:3px}\r
 .gw-shell .gw-secondary{border-color:#655a79;background:#201d29;color:#e0d7ed}\r
 .gw-shell .gw-secondary:hover:not(:disabled){background:#30283f;border-color:var(--secondary)}\r
@@ -6845,7 +6795,7 @@ var styles_default = `*{box-sizing:border-box}html,body,#root{margin:0;width:100
 .gw-rhythm label { display: flex; gap: 8px; align-items: center; margin: 10px 0; font-size: 14px; }\r
 .gw-rhythm input { accent-color: #d4f24b; width: auto; }\r
 \r
-.gw-unread-dot{width:7px;height:7px;border-radius:50%;background:#ff787e;flex-shrink:0;margin-left:auto}.gw-notice-sound{float:right;border:0;background:transparent;color:var(--muted);font-size:12px;padding:4px}.gw-stepper{padding-left:20px;padding-right:20px}.gw-stepper button{font-size:13px}.gw-stepper button.current>span{animation:gw-stage-pulse 2s ease-in-out infinite}@keyframes gw-stage-pulse{50%{box-shadow:0 0 0 7px #c7b5ee28}}@media(prefers-reduced-motion:reduce){.gw-stepper button.current>span{animation:none}}\r
+.gw-unread-dot{width:7px;height:7px;border-radius:50%;background:#ff787e;flex-shrink:0;margin-left:auto}.gw-notice-sound{float:right;border:0;background:transparent;color:var(--muted);font-size:12px;padding:4px}.gw-stepper{padding-left:20px;padding-right:20px}.gw-stepper > li{font-size:13px}.gw-stepper > li.current>span{animation:gw-stage-pulse 2s ease-in-out infinite}@keyframes gw-stage-pulse{50%{box-shadow:0 0 0 7px #c7b5ee28}}@media(prefers-reduced-motion:reduce){.gw-stepper > li.current>span{animation:none}}\r
 \r
 /* Conversation-first workspace: tools, then projects; actionable overview. */\r
 .gw-shell .gw-nav-items{flex-shrink:0}.gw-shell .gw-desktop-projects{margin-top:20px;padding-top:16px;border-top:1px solid var(--border);border-bottom:0;flex:1;max-height:none}.gw-overview-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:20px 0 28px}.gw-overview-cards article{background:#211f2a;border:1px solid #3b3549;border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:10px}.gw-overview-cards article>span{font-size:12px;color:var(--muted)}.gw-overview-cards strong{font-size:21px;font-weight:600}.gw-overview-cards small{font-size:13px;font-weight:400;color:#c6bdd5}.gw-overview-cards p,.gw-task-group header p{font-size:13px;color:var(--muted);margin:0}.gw-text-action{background:transparent;border:0;color:#d3c0fa;padding:0;text-align:left;align-self:flex-start}.gw-task-group{margin:24px 0}.gw-task-group header{margin-bottom:14px}.gw-task-group h2{font-size:18px;margin:0 0 8px}.gw-task-group h2 small{font-size:12px;color:var(--muted);margin-left:8px}.gw-task-grid{display:grid;gap:12px}.gw-shell .gw-task{border:1px solid #393344;border-radius:12px;background:#1d1b24;padding:18px;margin:0;gap:20px}.gw-task>div:first-child{min-width:0;flex:1}.gw-task h3{font-size:16px;line-height:1.5;margin:8px 0}.gw-task-goal{color:#d4cfdf;font-size:14px;line-height:1.7;overflow-wrap:anywhere}.gw-task details{font-size:13px;margin-top:12px}.gw-task-actions{flex-shrink:0}.gw-overview-details{padding:16px 0;border-top:1px solid var(--border);font-size:14px}.gw-modal{background:#211e2a;border-color:#494056}.gw-playtest-goal{padding:16px;border:1px solid #494056;border-radius:12px;background:#2a2535;margin:18px 0}.gw-playtest-goal>span{font-size:12px;color:#c7b5ee}.gw-playtest-goal p{font-size:16px;line-height:1.7;margin:8px 0 0}.gw-playtest-checks{margin:18px 0;font-size:13px}.gw-modal .gw-acceptance-choices label{display:flex;flex-direction:row;align-items:flex-start;gap:10px}.gw-modal .gw-acceptance-choices input{width:18px;height:18px;margin:2px 0;flex-shrink:0}.gw-shell button,.gw-modal button{transition:background-color 160ms ease,border-color 160ms ease,color 160ms ease,box-shadow 160ms ease,transform 120ms ease}.gw-shell button:active:not(:disabled),.gw-modal button:active:not(:disabled){transform:translateY(1px)}.gw-shell button:focus-visible,.gw-modal button:focus-visible{outline:2px solid #c7b5ee;outline-offset:3px}.gw-shell .gw-primary:hover:not(:disabled){background:#def65f;box-shadow:0 2px 12px #cce74418}.gw-shell .gw-secondary:hover:not(:disabled),.gw-modal .gw-secondary:hover:not(:disabled){background:#302a40;border-color:#79678f}@media(max-width:600px){.gw-overview-cards{gap:10px}.gw-overview-cards article{padding:12px}.gw-overview-cards strong{font-size:16px}.gw-task-actions{display:flex;flex-direction:row;flex-wrap:wrap}.gw-shell .gw-task{padding:14px}}@media(prefers-reduced-motion:reduce){.gw-shell button,.gw-modal button{transition:none!important;transform:none!important}}\r
@@ -6860,7 +6810,7 @@ var styles_default = `*{box-sizing:border-box}html,body,#root{margin:0;width:100
 .gw-lifecycle-card textarea { display: block; width: 100%; box-sizing: border-box; min-height: 76px; resize: vertical; color: inherit; background: #17171e; border: 1px solid #625572; border-radius: 9px; padding: 10px; font: inherit; }\r
 .gw-lifecycle-card details { margin-top: 12px; }\r
 \r
-@media(max-width:600px){.gw-stepper{height:auto;min-height:58px;padding:14px 20px;align-items:center}.gw-stepper button:not(.current){display:none}.gw-stepper button.current{flex-direction:row;justify-content:flex-start;gap:12px;font-size:14px}.gw-stepper button:after{display:none}}\r
+@media(max-width:600px){.gw-stepper{height:auto;min-height:58px;padding:14px 20px;align-items:center}.gw-stepper > li:not(.current){display:none}.gw-stepper > li.current{flex-direction:row;justify-content:flex-start;gap:12px;font-size:14px}.gw-stepper > li:after{display:none}}\r
 \r
 .gw-modal.gw-playtest-modal{width:min(640px,calc(100vw - 32px));max-width:640px;padding:24px;border-radius:20px}\r
 .gw-playtest-feedback .gw-feedback-intro{color:#bbb5c8;margin:0 0 20px}\r
@@ -7168,6 +7118,13 @@ var styles_default = `*{box-sizing:border-box}html,body,#root{margin:0;width:100
   border: 0;\r
 }\r
 .gw-import-options button { justify-self: start; }\r
+
+.gw-stepper { list-style: none; margin: 0; }
+.gw-stepper > li { cursor: default; }
+.gw-start-alternatives { display: flex; flex-wrap: wrap; gap: 10px 24px; font-size: 14px; }
+.gw-overview-tools > summary { cursor: pointer; }
+.gw-overview-tools .gw-tool-deck { margin-top: 12px; }
+.gw-diagnosis-actions label { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 `;
 
 // src/project-intake-session.mjs
