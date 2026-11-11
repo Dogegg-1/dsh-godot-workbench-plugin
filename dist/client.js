@@ -5878,6 +5878,7 @@ function App({ api = defaultApi, conversation = null, agentState = null, host = 
   const [projectIntent, setProjectIntent] = (0, import_react34.useState)("connect");
   const [developmentMode, setDevelopmentMode] = (0, import_react34.useState)("continuous");
   const [lifecycleMode, setLifecycleMode] = (0, import_react34.useState)("full");
+  const planLaunchRef = (0, import_react34.useRef)(null);
   const initialRouting = (0, import_react34.useRef)(initialPage === "auto");
   const [status, setStatus] = (0, import_react34.useState)(null);
   const [page, updatePage] = (0, import_react34.useState)(initialPage === "auto" ? "plan" : initialPage === "reports" ? "diagnose" : initialPage);
@@ -6214,12 +6215,20 @@ function App({ api = defaultApi, conversation = null, agentState = null, host = 
   function checklistAction() {
     if (!status) return null;
     if (!status.plan) return { title: "\u5148\u8BF4\u8BF4\u4F60\u60F3\u505A\u4EC0\u4E48", detail: "\u4ECE\u6838\u5FC3\u73A9\u6CD5\u548C\u73A9\u5BB6\u76EE\u6807\u5F00\u59CB\u3002" };
-    if (!status.approved) return {
-      title: status.assessment.ready ? "\u8BA1\u5212\u7B49\u4F60\u786E\u8BA4" : "\u8865\u9F50\u5F00\u53D1\u8BA1\u5212",
-      detail: status.assessment.ready ? "\u6838\u5BF9\u73A9\u6CD5\u3001\u8303\u56F4\u548C\u8BD5\u73A9\u6807\u51C6\u3002" : status.assessment.questions[0] || "\u5148\u660E\u786E\u73A9\u6CD5\u548C\u8303\u56F4\u3002",
-      label: "\u6253\u5F00\u5F00\u53D1\u8BA1\u5212",
-      run: page !== "plan" ? openPlan : null
-    };
+    if (!status.approved) {
+      const ready = status.assessment.ready;
+      const viewingPlan = page === "plan";
+      return {
+        title: ready ? "\u8BA1\u5212\u7B49\u4F60\u786E\u8BA4" : "\u8865\u9F50\u5F00\u53D1\u8BA1\u5212",
+        detail: ready ? "\u6838\u5BF9\u73A9\u6CD5\u3001\u8303\u56F4\u548C\u8BD5\u73A9\u6807\u51C6\u3002" : status.assessment.questions[0] || "\u5148\u660E\u786E\u73A9\u6CD5\u548C\u8303\u56F4\u3002",
+        label: viewingPlan ? "\u524D\u5F80\u5F00\u5DE5\u8BBE\u7F6E" : "\u6253\u5F00\u5F00\u53D1\u8BA1\u5212",
+        run: !viewingPlan ? openPlan : ready ? () => {
+          const section = planLaunchRef.current;
+          section?.focus({ preventScroll: true });
+          section?.scrollIntoView({ block: "nearest" });
+        } : null
+      };
+    }
     const inOverview = page === "overview" && overviewView === "tasks";
     const openOverview = (target) => {
       setOverviewView("tasks");
@@ -6270,7 +6279,7 @@ function App({ api = defaultApi, conversation = null, agentState = null, host = 
     };
     return null;
   }
-  const planLaunch = page === "plan" && pendingPlan && /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("section", { className: "gw-plan-launch", "aria-label": planAwaitingDecisions ? "\u5F00\u5DE5\u524D\u8FD8\u9700\u8981\u786E\u8BA4" : "\u5F00\u5DE5\u8BBE\u7F6E", children: [
+  const planLaunch = page === "plan" && pendingPlan && /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)("section", { ref: planLaunchRef, tabIndex: -1, className: "gw-plan-launch", "aria-label": planAwaitingDecisions ? "\u5F00\u5DE5\u524D\u8FD8\u9700\u8981\u786E\u8BA4" : "\u5F00\u5DE5\u8BBE\u7F6E", children: [
     /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("h2", { children: planAwaitingDecisions ? "\u5F00\u5DE5\u524D\u8FD8\u9700\u8981\u786E\u8BA4" : "\u786E\u8BA4\u5E76\u5F00\u5DE5" }),
     planAwaitingDecisions ? /* @__PURE__ */ (0, import_jsx_runtime26.jsxs)(import_jsx_runtime26.Fragment, { children: [
       /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("ul", { className: "gw-plan-questions", children: status.assessment.questions.map((question, index) => /* @__PURE__ */ (0, import_jsx_runtime26.jsx)("li", { children: question }, index)) }),

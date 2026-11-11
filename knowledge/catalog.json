@@ -1302,6 +1302,8 @@
         "匹配",
         "中继",
         "ENet",
+        "Steam",
+        "EOS",
         "multiplayer"
       ],
       "stages": [
@@ -1313,12 +1315,12 @@
       "kind": "official-summary-and-recipe",
       "version": "Godot 4.x；文档核对4.7，部署取舍为建议",
       "source": "https://docs.godotengine.org/en/4.7/tutorials/networking/high_level_multiplayer.html",
-      "content": "区分状态权威与独立服务器部署。熟人局域网合作可比较房主结算与独立进程；匹配、穿透、中继、账号、持久化和反作弊按网络及产品条件评估，不是所有公开发布的必需清单。未跑联网实验不得声称能力已验证。",
-      "updatedAt": "2026-11-09",
+      "content": "分别判断谁结算、进程在哪里运行和玩家怎样连接。公网 ENet 先核对 UDP 可达。Steam 或 EOS 中继可保留房主结算，需核对 SDK、平台身份和分发条件。排除自建账号时，另问用户是否接受平台身份。工期依据不足时先列关键工作项，并做最小双端验证。匹配、持久化和反作弊按需求评估。",
+      "updatedAt": "2026-11-11",
       "verification": {
         "status": "source-reviewed",
-        "checkedAt": "2026-11-09",
-        "note": "已查阅官方高层多人和专用服务端导出文档。来自真实评审失败样例的建议整理，尚未通过实际联网或新增配方模型效果验证。"
+        "checkedAt": "2026-11-11",
+        "note": "已查阅 Godot 高层多人和专用服务端文档、Steamworks 中继与 Epic EOS P2P 接入资料。实际联网和工期仍待项目验证。"
       },
       "bodyPath": "recipes/engineering-multiplayer-scope.md"
     },

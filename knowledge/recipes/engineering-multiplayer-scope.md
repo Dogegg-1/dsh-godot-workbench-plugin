@@ -13,7 +13,11 @@
 - A：房主同时游玩并负责状态结算，其他玩家发送操作意图。适合接受信任房主、房主退出结束一局的合作原型。需要明确共享状态、合法输入、重复操作处理、连接失败及退出语义；不是给单机变量加一条RPC就完成。代价是房主有优势、进程退出会结束会话；除非另做迁移，不承诺无缝接管。
 - B：独立进程负责结算，玩家都作为客户端。适合希望会话不依赖某位玩家在线、由运营者控制共享状态的项目。需要额外部署、生命周期和版本管理，但不必默认租云机器，也不必默认建立账号系统。Godot 可无窗口运行或导出专用服务端。[官方专用服务端导出](https://docs.godotengine.org/en/4.7/tutorials/export/exporting_for_dedicated_servers.html)
 
+连接方式单独评估。公网 ENet 直连先核对 UDP、防火墙和目标网络的可达性，家用 NAT 常需路由器转发 UDP 端口。接入中继时可以继续由房主结算。Steam 路线要核对 Steamworks SDK、应用 ID、Steam 客户端身份和发行环境。EOS P2P 要配置产品客户端及策略，并通过 Connect 获取玩家的 Product User ID。用户排除自建账号时，先确认是否接受平台身份接入。 [Godot 托管说明](https://docs.godotengine.org/en/4.7/tutorials/networking/high_level_multiplayer.html#hosting-considerations) · [Steam 中继](https://partner.steamgames.com/doc/features/multiplayer/steamdatagramrelay) · [Steamworks 初始化](https://partner.steamgames.com/doc/sdk/api#initialization_and_shutdown) · [EOS P2P 接入](https://dev.epicgames.com/docs/epic-online-services/multiplayer/nat-p2p-interface/p2p-guide/p2p-intro?lang=en-US)
+
 两位熟人、局域网、十分钟一局、局末丢弃进度时，通常先推荐A的小实验；这是基于这些条件的建议。若单机核心循环尚未验收，先完成现有范围，或仅提议独立风险实验，不直接开做。
+
+“两晚”之类的时间是投入上限。先看现有单机逻辑能否分离结算与界面、双端连接能否建立，以及所选平台是否已有接入条件。缺少这些证据时把工期标为未评估，写清最可能影响工期的假设，再验证该项。
 
 ## 未来能力必须写触发条件
 
